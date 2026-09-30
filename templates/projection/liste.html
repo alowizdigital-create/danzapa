@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block titre %}Thèmes{% endblock %}
+
+{% block contenu %}
+<div class="entete-page">
+  <div>
+    <h1>Thèmes</h1>
+    <p class="sous-titre">Apparence des diapos : fond, police, couleurs. Le thème se choisit pour chaque culte dans l'onglet <strong>Création</strong>.</p>
+  </div>
+  {% if perms.projection.add_theme %}<a class="bouton-principal" href="{% url 'projection:theme_creation' %}">+ Nouveau thème</a>{% endif %}
+</div>
+
+<div class="grille-themes">
+  {% for theme in theme_list %}
+  <a class="carte-theme{% if theme.image_bienvenue %} avec-image-bienvenue{% endif %}" href="{% if perms.projection.change_theme %}{{ theme.get_absolute_url }}{% else %}#{% endif %}" style="{{ theme.style_css }}">
+    <div class="diapo diapo-titre" style="--taille: 4cqw"><div class="diapo-contenu"><p>{{ theme.nom }}</p></div></div>
+    <div class="diapo diapo-paroles" style="--taille: 5.6cqw"><div class="diapo-contenu"><p>1. Sans attendre</p><p>Je veux tendre</p></div></div>
+    <span class="carte-theme-nom">{{ theme.nom }}{% if theme.est_classique %} <span class="badge">par défaut</span>{% endif %}</span>
+    <span class="liste-meta">{{ theme.police }} {{ theme.taille_paroles }} pt · {{ theme.cultes.count }} culte{{ theme.cultes.count|pluralize }}</span>
+  </a>
+  {% endfor %}
+</div>
+{% endblock %}

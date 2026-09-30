@@ -6,7 +6,7 @@
 <div class="entete-page">
   <div>
     <h1>Cultes</h1>
-    <p class="sous-titre">Préparez la présentation de chaque culte à partir de la bibliothèque de chants.</p>
+    <p class="sous-titre">Préparez la présentation de chaque culte à partir de la bibliothèque de chants.{% if perms.projection.view_theme %} <a href="{% url 'projection:theme_liste' %}">Thèmes</a>{% endif %}</p>
   </div>
   {% if perms.cultes.add_culte %}
   <form method="post" action="{% url 'cultes:creation' %}" class="creation-rapide">

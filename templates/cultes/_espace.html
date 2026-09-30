@@ -1,5 +1,5 @@
 {# Vignettes, diapo courante, propriétés et barre d'état. Renvoyé après chaque modification (HTMX). #}
-<div id="espace" class="espace" data-selection="{{ selection|default_if_none:'' }}">
+<div id="espace" class="espace{% if theme.image_bienvenue %} avec-image-bienvenue{% endif %}" data-selection="{{ selection|default_if_none:'' }}" style="{{ theme.style_css }}">
   <datalist id="liste-moments">{% for m in moments %}<option value="{{ m }}">{% endfor %}</datalist>
 
   <aside class="vignettes" aria-label="Diapositives">

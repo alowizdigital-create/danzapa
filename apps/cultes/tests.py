@@ -101,7 +101,7 @@ class DiaposDuCulteTests(TestCase):
             [d.type for d in liste],
             ["bienvenue", "titre", "paroles", "paroles", "paroles", "paroles"],
         )
-        self.assertEqual(liste[0].lignes, ["Bienvenus dans la maison du Seigneur"])
+        self.assertEqual(liste[0].lignes, ["Bienvenus", "dans la", "maison du Seigneur"])
         self.assertEqual(liste[1].lignes, ["Cantique d'entrée : Sans attendre je veux tendre"])
         self.assertEqual(liste[2].lignes, ["1. Sans attendre", "Je veux tendre", "Au bonheur promis"])
         self.assertEqual(liste[3].lignes[0], "De mon Dieu je suis l'enfant")
@@ -174,7 +174,7 @@ class VuesTests(TestCase):
 
     def test_editeur_affiche_les_diapos_et_suggere_le_cantique_d_entree(self):
         reponse = self.client.get(self.culte.get_absolute_url())
-        self.assertContains(reponse, "Bienvenus dans la maison du Seigneur")
+        self.assertContains(reponse, "maison du Seigneur")
         self.assertContains(reponse, 'id="moment-chant" name="moment" value="Cantique d&#x27;entrée"')
 
     def test_ajout_d_un_chant(self):
@@ -268,7 +268,7 @@ class VuesTests(TestCase):
         self.hx_post(self.url("parametres"), {"titre": "Culte de Pâques"})
         self.culte.refresh_from_db()
         self.assertEqual(self.culte.titre, "Culte de Pâques")
-        self.assertEqual(self.culte.texte_bienvenue, "Bienvenus dans la maison du Seigneur")
+        self.assertEqual(self.culte.texte_bienvenue, "Bienvenus\ndans la\nmaison du Seigneur")
         self.hx_post(self.url("parametres"), {"lignes_par_diapo": "3"})
         self.culte.refresh_from_db()
         self.assertEqual((self.culte.titre, self.culte.lignes_par_diapo), ("Culte de Pâques", 3))

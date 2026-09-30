@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     "apps.comptes",
     "apps.chants",
     "apps.cultes",
+    "apps.projection",
 ]
 
 MIDDLEWARE = [

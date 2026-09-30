@@ -27,6 +27,7 @@
 
     const source = vignette.querySelector(".diapo");
     grande.className = source.className + " diapo-grande";
+    grande.setAttribute("style", source.getAttribute("style") || "");
     grande.innerHTML = source.innerHTML;
 
     const position = e.querySelector("[data-position]");

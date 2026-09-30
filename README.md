@@ -57,7 +57,7 @@ Les rôles s'appuient sur les groupes et permissions de Django.
 
 - Python 3.11+, Django 5.2
 - Templates Django + HTMX, SortableJS pour le glisser-déposer
-- `python-pptx` pour l'export PowerPoint
+- `python-pptx` pour l'export PowerPoint, Pillow pour les images des thèmes
 - SQLite en développement, PostgreSQL en production
 
 ## Structure prévue
@@ -79,7 +79,7 @@ danzapa/
 1. ✅ **Fondations** : projet Django, authentification, rôles, admin.
 2. ✅ **Bibliothèque de chants** : CRUD, recherche, import de paroles collées avec découpage automatique.
 3. ✅ **Préparation d'un culte** : éditeur façon PowerPoint, ajout de chants, réordonnancement.
-4. **Export PowerPoint** : génération du `.pptx` selon le thème.
+4. ✅ **Export PowerPoint** : génération du `.pptx` selon le thème.
 5. **Mode projection** : plein écran, clavier, vue présentateur.
 6. **Module Bible** : import d'une version libre de droits, recherche, projection de versets.
 
@@ -148,6 +148,25 @@ Dans **Cultes**, choisissez la date et cliquez sur **Créer**. L'éditeur s'ouvr
 - **Affichage** ou barre d'état : vue normale ou trieuse de diapositives. Les flèches du clavier passent d'une diapo à l'autre.
 
 Chaque modification est enregistrée aussitôt (« ✓ Enregistré » en haut à droite). Un chant utilisé dans un culte ne peut pas être supprimé de la bibliothèque, et sa page indique les cultes où il a servi.
+
+## Exporter en PowerPoint et choisir un thème
+
+- **Fichier → Exporter en PowerPoint** télécharge « Culte du 20 septembre 2026.pptx », prêt à projeter. Le fichier contient exactement les diapos de l'éditeur :
+  - les éléments masqués deviennent des diapos masquées de PowerPoint (présentes dans le fichier, mais sautées pendant la projection) ;
+  - les notes du présentateur indiquent le chant et le couplet ;
+  - une ligne trop longue est réduite automatiquement pour tenir sur la diapo, avec le même calcul dans l'aperçu et dans le fichier.
+- **Création → Thème** : choisir l'apparence du culte. **Gérer les thèmes** (ou `/themes/`) pour créer un thème :
+  - couleur ou image de fond ;
+  - couleur du texte ;
+  - polices et tailles des paroles et des titres ;
+  - titres en majuscules ou non ;
+  - couleur du bandeau de bienvenue, ou une image qui remplace toute la diapo de bienvenue.
+
+  L'aperçu se met à jour pendant la saisie.
+- Le thème **Classique** reproduit la présentation actuelle : paroles blanches en gras sur fond noir, titres en majuscules, bandeau gris pour la bienvenue. Il est utilisé par défaut et ne peut pas être supprimé.
+- Les polices proposées existent sur Windows et Mac, pour que le fichier s'affiche comme prévu sur l'ordinateur de projection.
+
+En production, les images des thèmes (dossier `media/`) doivent être servies par l'hébergeur ; en développement, Django s'en charge.
 
 ## Tests
 

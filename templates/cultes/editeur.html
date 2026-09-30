@@ -52,7 +52,7 @@
       <span class="ruban-libelle">Culte</span>
     </div>
     <div class="ruban-groupe">
-      <button type="button" class="outil" disabled title="Disponible à l'étape 4"><span class="outil-icone">⇩</span>Exporter en PowerPoint</button>
+      <a class="outil" href="{% url 'cultes:export_pptx' culte.pk %}" download><span class="outil-icone">⇩</span>Exporter en PowerPoint</a>
       <span class="ruban-libelle">Exporter</span>
     </div>
     {% if perms.cultes.delete_culte %}
@@ -107,10 +107,15 @@
       </label>
       <span class="ruban-libelle">Paroles</span>
     </form>
-    <div class="ruban-groupe">
-      <button type="button" class="outil" disabled title="Disponible à l'étape 4"><span class="outil-icone">◐</span>Thèmes</button>
+    <form class="ruban-groupe ruban-form" hx-post="{% url 'cultes:parametres' culte.pk %}" hx-trigger="change" hx-target="#espace" hx-swap="outerHTML">
+      <label>Thème
+        <select name="theme">
+          {% for t in themes %}<option value="{{ t.pk }}"{% if t.pk == theme.pk %} selected{% endif %}>{{ t.nom }}</option>{% endfor %}
+        </select>
+      </label>
+      {% if perms.projection.view_theme %}<a class="bouton-lien lien-themes" href="{% url 'projection:theme_liste' %}">Gérer les thèmes</a>{% endif %}
       <span class="ruban-libelle">Thèmes</span>
-    </div>
+    </form>
   </div>
   {% endif %}
 

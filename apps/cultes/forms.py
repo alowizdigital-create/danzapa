@@ -3,7 +3,7 @@ from django.forms import modelform_factory
 
 from .models import Culte, ElementCulte
 
-CHAMPS_PARAMETRES = ["titre", "statut", "texte_bienvenue", "lignes_par_diapo"]
+CHAMPS_PARAMETRES = ["titre", "statut", "texte_bienvenue", "lignes_par_diapo", "theme"]
 
 
 class NouveauCulteForm(forms.ModelForm):

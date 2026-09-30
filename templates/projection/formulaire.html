@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+
+{% block titre %}{% if object %}Thème « {{ object.nom }} »{% else %}Nouveau thème{% endif %}{% endblock %}
+
+{% block contenu %}
+<p><a class="bouton-lien" href="{% url 'projection:theme_liste' %}">← Thèmes</a></p>
+<div class="entete-page">
+  <h1>{% if object %}Thème « {{ object.nom }} »{% else %}Nouveau thème{% endif %}</h1>
+  {% if object and not object.est_classique and perms.projection.delete_theme %}
+    <a class="bouton-secondaire" href="{% url 'projection:theme_suppression' object.pk %}">Supprimer</a>
+  {% endif %}
+</div>
+
+<form method="post" enctype="multipart/form-data" class="formulaire-theme" id="formulaire-theme">
+  {% csrf_token %}
+  {% for erreur in form.non_field_errors %}<p class="message message-error">{{ erreur }}</p>{% endfor %}
+
+  <div class="colonne-infos">
+    {% for champ in form %}
+    <div class="champ{% if champ.field.widget.input_type == 'checkbox' %} champ-case{% endif %}">
+      <label for="{{ champ.id_for_label }}">{{ champ.label|capfirst }}</label>
+      {{ champ }}
+      {% if champ.help_text %}<small>{{ champ.help_text }}</small>{% endif %}
+      {% for erreur in champ.errors %}<small class="erreur">{{ erreur }}</small>{% endfor %}
+    </div>
+    {% endfor %}
+    <button type="submit" class="bouton-principal">Enregistrer</button>
+  </div>
+
+  <div class="colonne-apercu">
+    <p class="aide">Aperçu</p>
+    <div id="apercu-theme" class="apercu-theme{% if apercu_theme.image_bienvenue %} avec-image-bienvenue{% endif %}" style="{{ apercu_theme.style_css }}">
+      {% for diapo in exemples %}{% include "cultes/_diapo.html" %}{% endfor %}
+    </div>
+  </div>
+</form>
+
+{{ polices|json_script:"piles-polices" }}
+{{ chasses|json_script:"chasses-polices" }}
+<script>
+// Aperçu en direct : les champs du formulaire mettent à jour les variables CSS.
+(function () {
+  const form = document.getElementById("formulaire-theme");
+  const apercu = document.getElementById("apercu-theme");
+  const piles = JSON.parse(document.getElementById("piles-polices").textContent);
+  const chasses = JSON.parse(document.getElementById("chasses-polices").textContent);
+  const cqw = (pt) => (pt * 100 / 960).toFixed(3) + "cqw";
+  const val = (nom) => form.elements[nom];
+
+  function image(nom, variable) {
+    const champ = val(nom);
+    const effacer = form.elements[nom + "-clear"];
+    if (champ.files && champ.files[0]) {
+      apercu.style.setProperty(variable, `url('${URL.createObjectURL(champ.files[0])}')`);
+    } else if (effacer && effacer.checked) {
+      apercu.style.setProperty(variable, "none");
+    }
+  }
+
+  function maj() {
+    const s = apercu.style;
+    s.setProperty("--fond-couleur", val("couleur_fond").value);
+    s.setProperty("--texte-couleur", val("couleur_texte").value);
+    s.setProperty("--bandeau", val("couleur_bandeau").value);
+    s.setProperty("--police", piles[val("police").value]);
+    s.setProperty("--police-titres", piles[val("police_titres").value]);
+    s.setProperty("--poids", val("gras").checked ? "700" : "400");
+    s.setProperty("--casse-titre", val("titres_majuscules").checked ? "uppercase" : "none");
+    const paroles = Number(val("taille_paroles").value) || 54;
+    const titre = Number(val("taille_titre").value) || 32;
+    const majuscules = val("titres_majuscules").checked;
+    // Même calcul que apps/projection/rendu.py : taille réduite si le texte ne tient pas.
+    const ajuster = (diapo, nominale, largeur, hauteur, chasse) => {
+      const lignes = Array.from(diapo.querySelectorAll("p"), (p) => p.textContent);
+      const longue = Math.max(...lignes.map((l) => l.length), 1);
+      const taille = Math.max(Math.min(24, nominale), Math.min(nominale, largeur / (longue * chasse), hauteur / (lignes.length * 1.2)));
+      diapo.style.setProperty("--taille", cqw(taille));
+    };
+    const chassePar = chasses[val("police").value] || 0.6;
+    const chasseTitres = chasses[val("police_titres").value] || 0.6;
+    ajuster(apercu.querySelector(".diapo-paroles"), paroles, 864, 475.2, chassePar);
+    ajuster(apercu.querySelector(".diapo-titre"), titre, 864, 475.2, chasseTitres * (majuscules ? 1.3 : 1));
+    ajuster(apercu.querySelector(".diapo-bienvenue"), Math.round(paroles * 1.3), 757.9, 223.3, chasseTitres * 1.35);
+    image("image_fond", "--fond-image");
+    image("image_bienvenue", "--bienvenue-image");
+    if (form.elements["image_bienvenue-clear"] && form.elements["image_bienvenue-clear"].checked) s.removeProperty("--bienvenue-image");
+    const bienvenue = val("image_bienvenue");
+    if (bienvenue.files && bienvenue.files[0]) apercu.classList.add("avec-image-bienvenue");
+    if (form.elements["image_bienvenue-clear"] && form.elements["image_bienvenue-clear"].checked) apercu.classList.remove("avec-image-bienvenue");
+  }
+
+  form.addEventListener("input", maj);
+  form.addEventListener("change", maj);
+})();
+</script>
+{% endblock %}

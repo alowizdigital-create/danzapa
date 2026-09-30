@@ -353,8 +353,10 @@ a.carte-lien:hover { border-color: var(--accent); }
   container-type: inline-size;
   aspect-ratio: 16 / 9;
   width: 100%;
-  background: #000;
-  color: #fff;
+  background-color: var(--fond-couleur, #000);
+  background-image: var(--fond-image, none);
+  background-size: 100% 100%;
+  color: var(--texte-couleur, #fff);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -362,34 +364,35 @@ a.carte-lien:hover { border-color: var(--accent); }
   position: relative;
 }
 .diapo-contenu {
-  width: 100%;
-  padding: 0 5cqw;
+  width: 90%;
   text-align: center;
-  font-weight: 700;
-  line-height: 1.22;
+  font-family: var(--police, Calibri, Carlito, sans-serif);
+  font-weight: var(--poids, 700);
+  line-height: 1.2;
 }
-.diapo-contenu p { margin: 0; font-size: 6.4cqw; }
-.diapo-titre .diapo-contenu p {
-  font-size: 3.6cqw;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  font-family: Georgia, "Times New Roman", serif;
+/* --taille : calculée côté serveur (apps/projection/rendu.py), comme pour le .pptx */
+.diapo-contenu p { margin: 0; font-size: var(--taille, 5.6cqw); overflow-wrap: anywhere; }
+.diapo-titre .diapo-contenu {
+  font-family: var(--police-titres, Georgia, serif);
+  text-transform: var(--casse-titre, uppercase);
 }
+.diapo-bienvenue { background-image: var(--bienvenue-image, var(--fond-image, none)); }
 .diapo-bienvenue .diapo-contenu {
-  background: linear-gradient(#9d9d9d, #7d7d7d);
-  border-top: 0.8cqw double #c8c8c8;
-  border-bottom: 0.8cqw double #c8c8c8;
   width: 84%;
-  padding: 1.5cqw 2cqw;
-}
-.diapo-bienvenue .diapo-contenu p {
-  font-size: 7.4cqw;
+  min-height: 44%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  background: var(--bandeau, #8f8f8f);
+  box-shadow: 0 -1.2cqw 0 -0.8cqw #c8c8c8, 0 1.2cqw 0 -0.8cqw #c8c8c8;
+  font-family: var(--police-titres, Georgia, serif);
+  font-weight: 700;
   font-style: italic;
   text-transform: uppercase;
-  font-family: Georgia, "Times New Roman", serif;
   line-height: 1.05;
 }
-.diapo-texte .diapo-contenu p { font-size: 5.4cqw; }
+/* Une image de bienvenue remplace toute la diapo, texte compris. */
+.avec-image-bienvenue .diapo-bienvenue .diapo-contenu { visibility: hidden; }
 .diapo-masquee { opacity: 0.35; }
 .diapo-vide { background: #2b2b2b; }
 .diapo-vide::after { content: "Aucune diapo"; color: #bbb; font-size: 3cqw; }
@@ -675,3 +678,54 @@ input.titre-culte:hover, input.titre-culte:focus { border-color: var(--bordure);
   .vue-trieuse .groupe, .vue-trieuse .groupe-fixe { display: grid; grid-template-columns: repeat(2, 1fr); }
   .vue-trieuse .vignette { width: auto; }
 }
+
+.ruban-form select { font: inherit; font-size: 0.85rem; padding: 0.3rem; border: 1px solid var(--bordure); border-radius: 4px; background: var(--surface); }
+.lien-themes { font-size: 0.78rem; padding: 0.2rem 0.3rem; align-self: flex-end; }
+
+/* ================================================================
+   Thèmes
+   ================================================================ */
+.grille-themes {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 1rem;
+}
+.carte-theme {
+  display: grid;
+  gap: 0.4rem;
+  background: var(--surface);
+  border: 1px solid var(--bordure);
+  border-radius: var(--rayon);
+  padding: 0.75rem;
+  color: var(--texte);
+  text-decoration: none;
+}
+.carte-theme:hover { border-color: var(--accent); }
+.carte-theme .diapo { border-radius: 3px; }
+.carte-theme-nom { font-weight: 600; }
+.formulaire-theme {
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) 1.3fr;
+  gap: 1.5rem;
+  align-items: start;
+}
+.formulaire-theme .message { grid-column: 1 / -1; }
+.formulaire-theme input[type=color] { width: 4rem; height: 2.2rem; padding: 0.1rem; }
+.formulaire-theme select, .formulaire-theme input[type=number] {
+  font: inherit;
+  padding: 0.45rem 0.5rem;
+  border: 1px solid var(--bordure);
+  border-radius: var(--rayon);
+  max-width: 16rem;
+}
+.champ-case { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
+.champ-case small { flex-basis: 100%; }
+.colonne-apercu { position: sticky; top: 1rem; }
+.apercu-theme { display: grid; gap: 0.75rem; }
+.apercu-theme .diapo { border-radius: 4px; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2); }
+@media (max-width: 760px) {
+  .formulaire-theme { grid-template-columns: 1fr; }
+  .colonne-apercu { position: static; order: -1; }
+}
+.champ-case input { width: auto; order: -1; }
+.champ-case label { font-weight: 600; }

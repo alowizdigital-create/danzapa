@@ -4,16 +4,20 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.db import transaction
-from django.http import HttpResponseBadRequest
+from django.http import HttpResponse, HttpResponseBadRequest
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse_lazy
 from django.utils import timezone
+from django.utils.http import content_disposition_header
 from django.views.decorators.http import require_POST
 from django.views.generic import CreateView, DeleteView, TemplateView
 
 from apps.chants.forms import ChantForm
 from apps.chants.models import Chant
 from apps.chants.recherche import filtrer, titres_d_abord
+
+from apps.projection import pptx, rendu
+from apps.projection.models import Theme
 
 from . import diapos
 from .forms import (
@@ -42,9 +46,12 @@ def moments_connus():
 
 
 def contexte_espace(request, culte, selection=None):
-    groupes = diapos.groupes_du_culte(culte)
+    theme = culte.theme_effectif
+    groupes = rendu.annoter(diapos.groupes_du_culte(culte), theme)
     return {
         "culte": culte,
+        "theme": theme,
+        "themes": Theme.objects.all(),
         "groupes": groupes,
         "a_des_elements": any(g.element for g in groupes),
         "total_diapos": sum(len(g.diapos) for g in groupes),
@@ -292,3 +299,15 @@ def reordonner(request, pk):
     culte.renumeroter(ids)
     selection = request.POST.get("selection")
     return reponse_espace(request, culte, int(selection) if selection and selection.isdigit() else None)
+
+
+@peut_voir
+def exporter_pptx(request, pk):
+    culte = get_object_or_404(Culte.objects.select_related("theme"), pk=pk)
+    reponse = HttpResponse(
+        pptx.exporter(culte),
+        content_type="application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    )
+    # Content-Disposition avec nom UTF-8 (accents) géré par Django.
+    reponse.headers["Content-Disposition"] = content_disposition_header(True, pptx.nom_de_fichier(culte))
+    return reponse

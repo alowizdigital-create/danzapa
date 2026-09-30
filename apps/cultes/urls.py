@@ -8,6 +8,7 @@ urlpatterns = [
     path("", views.CulteListe.as_view(), name="liste"),
     path("nouveau/", views.CulteCreation.as_view(), name="creation"),
     path("<int:pk>/", views.editeur, name="editeur"),
+    path("<int:pk>/export.pptx", views.exporter_pptx, name="export_pptx"),
     path("<int:pk>/supprimer/", views.CulteSuppression.as_view(), name="suppression"),
     path("<int:pk>/dupliquer/", views.dupliquer, name="dupliquer"),
     path("<int:pk>/parametres/", views.parametres, name="parametres"),

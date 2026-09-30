@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+
+{% block titre %}Supprimer « {{ object.nom }} »{% endblock %}
+
+{% block contenu %}
+<h1>Supprimer le thème « {{ object.nom }} » ?</h1>
+{% with nb=object.cultes.count %}
+<p>{% if nb %}{{ nb }} culte{{ nb|pluralize }} utilise{{ nb|pluralize:"nt" }} ce thème et repassera{{ nb|pluralize:"ont" }} au thème « Classique ».{% else %}Aucun culte n'utilise ce thème.{% endif %}</p>
+{% endwith %}
+<form method="post" class="actions">
+  {% csrf_token %}
+  <button type="submit" class="bouton-danger">Supprimer</button>
+  <a class="bouton-secondaire" href="{{ object.get_absolute_url }}">Annuler</a>
+</form>
+{% endblock %}

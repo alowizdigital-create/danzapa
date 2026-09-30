@@ -7,7 +7,8 @@ from django.utils import formats
 from apps.chants.models import Chant
 
 MOMENT_PAR_DEFAUT = "Cantique d'entrée"
-BIENVENUE_PAR_DEFAUT = "Bienvenus dans la maison du Seigneur"
+# Sur trois lignes, comme dans la présentation PowerPoint actuelle.
+BIENVENUE_PAR_DEFAUT = "Bienvenus\ndans la\nmaison du Seigneur"
 
 
 def titre_pour(date):
@@ -27,6 +28,15 @@ class Culte(models.Model):
         blank=True,
         default=BIENVENUE_PAR_DEFAUT,
         help_text="Première diapo du culte. Laisser vide pour ne pas l'afficher.",
+    )
+    theme = models.ForeignKey(
+        "projection.Theme",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="cultes",
+        verbose_name="thème",
+        help_text="Vide : thème « Classique ».",
     )
     lignes_par_diapo = models.PositiveSmallIntegerField(
         "lignes par diapo",
@@ -60,6 +70,12 @@ class Culte(models.Model):
             self.titre = titre_pour(self.date)
         super().save(*args, **kwargs)
 
+    @property
+    def theme_effectif(self):
+        from apps.projection.models import Theme
+
+        return self.theme or Theme.par_defaut()
+
     def elements_complets(self):
         """Éléments avec leurs chants et couplets, en deux requêtes."""
         return self.elements.select_related("chant").prefetch_related("chant__couplets")
@@ -84,6 +100,7 @@ class Culte(models.Model):
             titre=titre_pour(date),
             date=date,
             texte_bienvenue=self.texte_bienvenue,
+            theme_id=self.theme_id,
             lignes_par_diapo=self.lignes_par_diapo,
             cree_par=par,
         )
