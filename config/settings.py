@@ -26,8 +26,19 @@ if not SECRET_KEY:
         raise RuntimeError("DJANGO_SECRET_KEY doit être défini en production.")
     SECRET_KEY = "django-insecure-dev-uniquement-ne-pas-utiliser-en-production"
 
-ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1")
-CSRF_TRUSTED_ORIGINS = env_list("DJANGO_CSRF_TRUSTED_ORIGINS")
+# localhost reste toujours autorisé : le healthcheck du conteneur l'interroge en interne.
+ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS") + ["localhost", "127.0.0.1"]
+# Derrière le proxy HTTPS (Dokploy/Traefik, Nginx…), Django exige que l'origine
+# des formulaires soit déclarée. Par défaut : https:// + chaque hôte autorisé.
+def origines_https(hotes):
+    return [f"https://{h.lstrip('.')}" for h in hotes if h not in ("*", "localhost", "127.0.0.1")]
+
+
+CSRF_TRUSTED_ORIGINS = env_list("DJANGO_CSRF_TRUSTED_ORIGINS") or origines_https(ALLOWED_HOSTS)
+
+# Données persistantes (base SQLite et images envoyées). Dans l'image Docker,
+# DATA_DIR=/data : un seul volume à monter pour tout conserver.
+DATA_DIR = Path(os.environ.get("DATA_DIR", BASE_DIR))
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -44,6 +55,8 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    # Sert les fichiers statiques (CSS, JS) en production, sans Nginx dédié.
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -88,7 +101,9 @@ else:
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.sqlite3",
-            "NAME": BASE_DIR / "db.sqlite3",
+            "NAME": DATA_DIR / "db.sqlite3",
+            # Plusieurs workers Gunicorn : attendre un verrou plutôt qu'échouer.
+            "OPTIONS": {"timeout": 20},
         }
     }
 
@@ -114,8 +129,21 @@ STATIC_URL = "static/"
 STATICFILES_DIRS = [BASE_DIR / "static"]
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
+STORAGES = {
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "staticfiles": {
+        "BACKEND": (
+            "django.contrib.staticfiles.storage.StaticFilesStorage"
+            if DEBUG
+            else "whitenoise.storage.CompressedManifestStaticFilesStorage"
+        )
+    },
+}
+
 MEDIA_URL = "media/"
-MEDIA_ROOT = BASE_DIR / "media"
+MEDIA_ROOT = DATA_DIR / "media"
+# Taille maximale d'un envoi (images de thème : 5 Mo, voir apps/projection).
+DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
@@ -123,3 +151,18 @@ if not DEBUG:
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+    # La redirection HTTP → HTTPS est faite par le proxy (Dokploy) ; l'activer
+    # ici aussi casserait le healthcheck interne en HTTP.
+    SECURE_SSL_REDIRECT = env_bool("DJANGO_SSL_REDIRECT", False)
+    SECURE_HSTS_SECONDS = int(os.environ.get("DJANGO_HSTS_SECONDS", "0"))
+
+# Journaux sur la sortie standard : visibles dans l'onglet « Logs » de Dokploy.
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {"console": {"class": "logging.StreamHandler"}},
+    "root": {"handlers": ["console"], "level": "WARNING"},
+    "loggers": {
+        "django": {"handlers": ["console"], "level": os.environ.get("DJANGO_LOG_LEVEL", "INFO"), "propagate": False},
+    },
+}

@@ -58,7 +58,8 @@ Les rôles s'appuient sur les groupes et permissions de Django.
 - Python 3.11+, Django 5.2
 - Templates Django + HTMX, SortableJS pour le glisser-déposer
 - `python-pptx` pour l'export PowerPoint, Pillow pour les images des thèmes
-- SQLite en développement, PostgreSQL en production
+- SQLite (dans un volume Docker en production), PostgreSQL possible
+- Gunicorn et WhiteNoise en production, image Docker (`Dockerfile`)
 
 ## Structure prévue
 
@@ -83,7 +84,11 @@ danzapa/
 5. **Mode projection** : plein écran, clavier, vue présentateur.
 6. **Module Bible** : import d'une version libre de droits, recherche, projection de versets.
 
-## Installation
+## Mise en ligne
+
+Danzapa se déploie avec Docker, par exemple avec **Dokploy** sur un VPS. Le guide pas à pas est dans [DEPLOIEMENT.md](DEPLOIEMENT.md) : sous-domaine, variables, volume de données, HTTPS, mises à jour et sauvegardes.
+
+## Installation (développement)
 
 ```bash
 git clone https://github.com/alowizdigital-create/danzapa.git

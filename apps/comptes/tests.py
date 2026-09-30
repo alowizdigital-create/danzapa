@@ -64,3 +64,52 @@ class ConnexionTests(TestCase):
         self.client.force_login(self.utilisateur)
         reponse = self.client.post(reverse("comptes:deconnexion"))
         self.assertRedirects(reponse, reverse("comptes:connexion"))
+
+
+class ProductionTests(TestCase):
+    def test_sante(self):
+        reponse = self.client.get(reverse("sante"))
+        self.assertEqual((reponse.status_code, reponse.content), (200, b"ok"))
+
+    def test_origines_csrf_deduites_des_hotes(self):
+        from config.settings import origines_https
+
+        self.assertEqual(
+            origines_https(["danzapa.eglise.org", ".eglise.org", "localhost", "127.0.0.1", "*"]),
+            ["https://danzapa.eglise.org", "https://eglise.org"],
+        )
+
+
+class SauvegardeTests(TestCase):
+    def test_archive_contient_la_base_et_garde_les_dernieres(self):
+        import tarfile
+        import tempfile
+        from io import StringIO
+        from pathlib import Path
+
+        from django.core.management import call_command
+        from django.test import override_settings
+
+        with tempfile.TemporaryDirectory() as dossier:
+            with override_settings(DATA_DIR=Path(dossier), MEDIA_ROOT=Path(dossier) / "media"):
+                (Path(dossier) / "media" / "themes").mkdir(parents=True)
+                (Path(dossier) / "media" / "themes" / "fond.png").write_bytes(b"png")
+                sauvegardes = Path(dossier) / "sauvegardes"
+                sauvegardes.mkdir()
+                for i in range(3):
+                    (sauvegardes / f"danzapa-2020010{i}-000000.tar.gz").write_bytes(b"")
+                call_command("sauvegarde", garder=2, stdout=StringIO())
+                archives = sorted(sauvegardes.glob("*.tar.gz"))
+                self.assertEqual(len(archives), 2)
+                with tarfile.open(archives[-1]) as tar:
+                    noms = tar.getnames()
+                self.assertIn("db.sqlite3", noms)
+                self.assertIn("media/themes/fond.png", noms)
+                with tarfile.open(archives[-1]) as tar:
+                    tar.extract("db.sqlite3", dossier, filter="data")
+                import sqlite3
+
+                base = sqlite3.connect(Path(dossier) / "db.sqlite3")
+                groupes = [n for (n,) in base.execute("SELECT name FROM auth_group")]
+                base.close()
+                self.assertIn("Éditeur", groupes)

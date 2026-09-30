@@ -254,3 +254,15 @@ class VuesTests(TestCase):
         self.culte.save()
         copie = self.culte.dupliquer(date(2026, 9, 27))
         self.assertEqual(copie.theme, theme)
+
+
+@override_settings(MEDIA_ROOT=MEDIA_TEMP, DEBUG=False)
+class ImagesEnProductionTests(TestCase):
+    def test_image_de_theme_servie_sans_debug(self):
+        theme = Theme.objects.create(nom="Photo", image_fond=image_png())
+        reponse = self.client.get("/" + "media/" + theme.image_fond.name)
+        self.assertEqual(reponse.status_code, 200)
+        self.assertEqual(reponse["Content-Type"], "image/png")
+
+    def test_pas_de_sortie_du_dossier_media(self):
+        self.assertIn(self.client.get("/media/../config/settings.py").status_code, (400, 404))

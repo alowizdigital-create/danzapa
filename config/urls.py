@@ -1,12 +1,13 @@
 from django.conf import settings
-from django.conf.urls.static import static
 from django.contrib import admin
-from django.urls import include, path
+from django.urls import include, path, re_path
+from django.views.static import serve
 
-from apps.comptes.views import accueil
+from apps.comptes.views import accueil, sante
 
 urlpatterns = [
     path("", accueil, name="accueil"),
+    path("sante/", sante, name="sante"),
     path("comptes/", include("apps.comptes.urls")),
     path("chants/", include("apps.chants.urls")),
     path("cultes/", include("apps.cultes.urls")),
@@ -14,6 +15,11 @@ urlpatterns = [
     path("admin/", admin.site.urls),
 ]
 
-if settings.DEBUG:
-    # En production, les images envoyées (thèmes) sont servies par l'hébergeur.
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+# Images envoyées (thèmes). Elles sont peu nombreuses et peu consultées : Django
+# les sert lui-même, y compris en production, ce qui évite un serveur Nginx
+# dédié à côté du conteneur. (`static()` ne fonctionne qu'en DEBUG.)
+def media(request, path):
+    return serve(request, path, document_root=settings.MEDIA_ROOT)
+
+
+urlpatterns += [re_path(r"^media/(?P<path>.*)$", media)]

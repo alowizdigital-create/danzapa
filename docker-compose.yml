@@ -1,0 +1,22 @@
+# Lancement avec Docker Compose (test local, ou mode « Compose » de Dokploy).
+#   docker compose up --build   →   http://localhost:8000
+# Les variables se mettent dans un fichier .env à côté de ce fichier
+# (voir DEPLOIEMENT.md). En production, Dokploy fournit le domaine et le HTTPS.
+services:
+  web:
+    build: .
+    restart: unless-stopped
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?Définir DJANGO_SECRET_KEY dans .env}
+      DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-localhost}
+    # Pour un test local. Dans Dokploy, retirer « ports » : le domaine suffit.
+    ports:
+      - "8000:8000"
+    volumes:
+      - danzapa-data:/data
+
+volumes:
+  danzapa-data:
