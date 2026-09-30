@@ -77,7 +77,7 @@ danzapa/
 ## Feuille de route
 
 1. ✅ **Fondations** : projet Django, authentification, rôles, admin.
-2. **Bibliothèque de chants** : CRUD, recherche, import de paroles collées avec découpage automatique.
+2. ✅ **Bibliothèque de chants** : CRUD, recherche, import de paroles collées avec découpage automatique.
 3. **Préparation d'un culte** : éditeur façon PowerPoint, ajout de chants, réordonnancement.
 4. **Export PowerPoint** : génération du `.pptx` selon le thème.
 5. **Mode projection** : plein écran, clavier, vue présentateur.
@@ -111,6 +111,29 @@ Les trois rôles sont créés automatiquement par `migrate` sous forme de groupe
 | Lecteur | Consulte les chants et les cultes, lance la projection |
 
 Pour ajouter quelqu'un : `/admin/` → **Utilisateurs** → **Ajouter**, puis cocher son groupe. Pour qu'un administrateur accède à `/admin/`, cocher aussi « Statut équipe ».
+
+## Saisir les paroles d'un chant
+
+Dans **Chants** → **Nouveau chant**, collez les paroles dans un seul champ. Danzapa les découpe automatiquement :
+
+```
+1. Sans attendre
+Je veux tendre
+Au bonheur promis
+
+Refrain
+De mon Dieu je suis l'enfant
+Et c'est lui qui me défend
+
+2. Qui s'élance
+Qui s'avance
+```
+
+- Une ligne vide sépare deux blocs.
+- `1.`, `2)` ou `3 -` en tête de bloc donne le numéro du couplet. Sans numéro, les couplets sont numérotés à la suite.
+- `Refrain`, `R:`, `Chorus`, `Pont` ou `Bridge` sur la première ligne marque le type du bloc.
+
+La page du chant affiche chaque bloc en aperçu de diapositive. La recherche ignore les accents et regarde le titre, l'auteur, les tags et les paroles : « s'elance » trouve « Qui s'élance ». Un chant qui existe déjà (même titre et même auteur) ne peut pas être recréé.
 
 ## Tests
 

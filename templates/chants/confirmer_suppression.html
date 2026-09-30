@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+
+{% block titre %}Supprimer « {{ object.titre }} »{% endblock %}
+
+{% block contenu %}
+<h1>Supprimer « {{ object.titre }} » ?</h1>
+<p>Le chant et ses paroles seront définitivement retirés de la bibliothèque.</p>
+<form method="post" class="actions">
+  {% csrf_token %}
+  <button type="submit" class="bouton-danger">Supprimer</button>
+  <a class="bouton-secondaire" href="{{ object.get_absolute_url }}">Annuler</a>
+</form>
+{% endblock %}

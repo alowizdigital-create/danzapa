@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block titre %}Bibliothèque de chants{% endblock %}
+
+{% block contenu %}
+<div class="entete-page">
+  <div>
+    <h1>Bibliothèque de chants</h1>
+    <p class="sous-titre">{{ total }} chant{{ total|pluralize }} enregistré{{ total|pluralize }}</p>
+  </div>
+  {% if perms.chants.add_chant %}
+    <a class="bouton-principal" href="{% url 'chants:creation' %}">+ Nouveau chant</a>
+  {% endif %}
+</div>
+
+<form method="get" class="recherche" role="search">
+  <input type="search" name="q" value="{{ q }}" placeholder="Rechercher un titre, un auteur, un tag ou des paroles…" aria-label="Rechercher" autofocus>
+  <button type="submit" class="bouton-secondaire">Rechercher</button>
+  {% if q %}<a class="bouton-lien" href="{% url 'chants:liste' %}">Effacer</a>{% endif %}
+</form>
+
+{% if chant_list %}
+<ul class="liste-chants">
+  {% for chant in chant_list %}
+  <li>
+    <a href="{{ chant.get_absolute_url }}">
+      <span class="liste-titre">{{ chant.titre }}</span>
+      <span class="liste-meta">
+        {% if chant.auteur %}{{ chant.auteur }} · {% endif %}{{ chant.langue }} · {{ chant.couplets.all|length }} bloc{{ chant.couplets.all|length|pluralize }}
+      </span>
+      {% with premier=chant.couplets.all|first %}
+        {% if premier %}<span class="liste-extrait">{{ premier.lignes|first }}</span>{% endif %}
+      {% endwith %}
+    </a>
+    {% if chant.liste_tags %}
+      <span class="tags">{% for tag in chant.liste_tags %}<a class="tag" href="?q={{ tag|urlencode }}">{{ tag }}</a>{% endfor %}</span>
+    {% endif %}
+  </li>
+  {% endfor %}
+</ul>
+
+{% if is_paginated %}
+<nav class="pagination">
+  {% if page_obj.has_previous %}<a class="bouton-lien" href="?page={{ page_obj.previous_page_number }}{% if q %}&q={{ q|urlencode }}{% endif %}">← Précédent</a>{% endif %}
+  <span>Page {{ page_obj.number }} sur {{ page_obj.paginator.num_pages }}</span>
+  {% if page_obj.has_next %}<a class="bouton-lien" href="?page={{ page_obj.next_page_number }}{% if q %}&q={{ q|urlencode }}{% endif %}">Suivant →</a>{% endif %}
+</nav>
+{% endif %}
+
+{% elif q %}
+  <p class="vide">Aucun chant ne correspond à « {{ q }} ».
+  {% if perms.chants.add_chant %}<a href="{% url 'chants:creation' %}">L'ajouter à la bibliothèque</a>{% endif %}</p>
+{% else %}
+  <p class="vide">La bibliothèque est vide.
+  {% if perms.chants.add_chant %}<a href="{% url 'chants:creation' %}">Ajouter le premier chant</a>{% endif %}</p>
+{% endif %}
+{% endblock %}

@@ -6,5 +6,6 @@ from apps.comptes.views import accueil
 urlpatterns = [
     path("", accueil, name="accueil"),
     path("comptes/", include("apps.comptes.urls")),
+    path("chants/", include("apps.chants.urls")),
     path("admin/", admin.site.urls),
 ]
