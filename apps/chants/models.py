@@ -29,7 +29,9 @@ class Chant(models.Model):
     date_modification = models.DateTimeField("modifié le", auto_now=True)
 
     class Meta:
-        ordering = ["titre"]
+        # `recherche` commence par le titre sans accents : « À toi la gloire »
+        # est classé avec les A, et non après le Z comme avec un tri sur `titre`.
+        ordering = ["recherche", "pk"]
         verbose_name = "chant"
         verbose_name_plural = "chants"
 
@@ -80,7 +82,7 @@ class Couplet(models.Model):
     texte = models.TextField()
 
     class Meta:
-        ordering = ["chant", "ordre"]
+        ordering = ["chant_id", "ordre"]
         verbose_name = "couplet"
         verbose_name_plural = "couplets"
 

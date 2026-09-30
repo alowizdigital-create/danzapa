@@ -78,7 +78,7 @@ danzapa/
 
 1. ✅ **Fondations** : projet Django, authentification, rôles, admin.
 2. ✅ **Bibliothèque de chants** : CRUD, recherche, import de paroles collées avec découpage automatique.
-3. **Préparation d'un culte** : éditeur façon PowerPoint, ajout de chants, réordonnancement.
+3. ✅ **Préparation d'un culte** : éditeur façon PowerPoint, ajout de chants, réordonnancement.
 4. **Export PowerPoint** : génération du `.pptx` selon le thème.
 5. **Mode projection** : plein écran, clavier, vue présentateur.
 6. **Module Bible** : import d'une version libre de droits, recherche, projection de versets.
@@ -134,6 +134,20 @@ Qui s'avance
 - `Refrain`, `R:`, `Chorus`, `Pont` ou `Bridge` sur la première ligne marque le type du bloc.
 
 La page du chant affiche chaque bloc en aperçu de diapositive. La recherche ignore les accents et regarde le titre, l'auteur, les tags et les paroles : « s'elance » trouve « Qui s'élance ». Un chant qui existe déjà (même titre et même auteur) ne peut pas être recréé.
+
+## Préparer un culte
+
+Dans **Cultes**, choisissez la date et cliquez sur **Créer**. L'éditeur s'ouvre avec la disposition de PowerPoint :
+
+- **Accueil** ou **Insertion** → **Insérer un chant** : cherchez dans la bibliothèque, indiquez le moment (« Cantique d'entrée » est proposé pour le premier chant) et cliquez sur le chant. Un chant absent de la bibliothèque se saisit avec **Nouveau chant** : il est enregistré dans la bibliothèque et ajouté au culte.
+- **Nouvelle diapo** : texte libre (annonces, lecture…). Une ligne vide sépare deux diapos.
+- Les vignettes à gauche sont regroupées par chant. Faites glisser l'en-tête d'un chant pour le déplacer entier, ou utilisez **Monter** / **Descendre**.
+- Sous la diapo : moment, **Répéter le refrain après chaque couplet**, **Corriger les paroles** (la correction s'applique à la bibliothèque, donc à tous les cultes), **Masquer**, **Retirer du culte**.
+- **Création** : texte de la diapo de bienvenue et nombre de lignes par diapo (4 par défaut ; 6 lignes donnent 3 + 3).
+- **Fichier** → **Dupliquer** : copie tout le culte sur une autre date, pratique d'un dimanche à l'autre.
+- **Affichage** ou barre d'état : vue normale ou trieuse de diapositives. Les flèches du clavier passent d'une diapo à l'autre.
+
+Chaque modification est enregistrée aussitôt (« ✓ Enregistré » en haut à droite). Un chant utilisé dans un culte ne peut pas être supprimé de la bibliothèque, et sa page indique les cultes où il a servi.
 
 ## Tests
 

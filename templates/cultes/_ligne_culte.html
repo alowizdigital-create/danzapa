@@ -1,0 +1,7 @@
+<li>
+  <a href="{{ culte.get_absolute_url }}">
+    <span class="liste-titre">{{ culte.titre }}</span>
+    <span class="liste-meta">{{ culte.date|date:"l j F Y"|capfirst }}</span>
+  </a>
+  <span class="badge{% if culte.statut == 'pret' %} badge-pret{% endif %}">{{ culte.get_statut_display }}</span>
+</li>

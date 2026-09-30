@@ -1,21 +1,22 @@
 {% extends "base.html" %}
 
-{% block titre %}{% if object %}Modifier « {{ object.titre }} »{% else %}Nouveau chant{% endif %}{% endblock %}
+{% block titre %}Nouveau chant pour « {{ culte.titre }} »{% endblock %}
 
 {% block contenu %}
-<p><a class="bouton-lien" href="{% if retour %}{{ retour }}{% elif object %}{{ object.get_absolute_url }}{% else %}{% url 'chants:liste' %}{% endif %}">← Annuler</a></p>
-{% if object and object.utilisations.exists %}
-  <p class="message">Ce chant est utilisé dans des cultes : la correction s'appliquera dans tous ces cultes.</p>
-{% endif %}
-<h1>{% if object %}Modifier « {{ object.titre }} »{% else %}Nouveau chant{% endif %}</h1>
+<p><a class="bouton-lien" href="{{ culte.get_absolute_url }}">← Retour au culte</a></p>
+<h1>Nouveau chant</h1>
+<p class="sous-titre">Il sera enregistré dans la bibliothèque et ajouté à « {{ culte.titre }} ».</p>
 
 <form method="post" class="formulaire-chant">
   {% csrf_token %}
-  {% if form.non_field_errors %}
-    {% for erreur in form.non_field_errors %}<p class="message message-error">{{ erreur }}</p>{% endfor %}
-  {% endif %}
+  {% for erreur in form.non_field_errors %}<p class="message message-error">{{ erreur }}</p>{% endfor %}
 
   <div class="colonne-infos">
+    <div class="champ">
+      <label for="id_moment">Moment du culte</label>
+      <input id="id_moment" name="moment" value="{{ moment }}" list="liste-moments" maxlength="100" placeholder="Ex. : Cantique d'entrée">
+      <datalist id="liste-moments">{% for m in moments %}<option value="{{ m }}">{% endfor %}</datalist>
+    </div>
     {% for champ in form %}{% if champ.name != "paroles" %}
     <div class="champ">
       <label for="{{ champ.id_for_label }}">{{ champ.label }}</label>
@@ -24,7 +25,7 @@
       {% for erreur in champ.errors %}<small class="erreur">{{ erreur }}</small>{% endfor %}
     </div>
     {% endif %}{% endfor %}
-    <button type="submit" class="bouton-principal">Enregistrer</button>
+    <button type="submit" class="bouton-principal">Enregistrer et ajouter</button>
   </div>
 
   <div class="colonne-paroles champ">

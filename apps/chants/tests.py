@@ -105,6 +105,14 @@ class VuesTests(TestCase):
         reponse = self.client.get(reverse("chants:liste"), {"q": "inexistant"})
         self.assertNotContains(reponse, "Sans attendre je veux tendre")
 
+    def test_tri_alphabetique_sans_accents(self):
+        Chant.objects.create(titre="À toi la gloire").remplacer_paroles("1. A")
+        Chant.objects.create(titre="Zachée").remplacer_paroles("1. Z")
+        self.client.force_login(self.lecteur)
+        reponse = self.client.get(reverse("chants:liste"))
+        titres = [c.titre for c in reponse.context["chant_list"]]
+        self.assertEqual(titres, ["À toi la gloire", "Sans attendre je veux tendre", "Zachée"])
+
     def test_recherche_par_tag(self):
         self.client.force_login(self.lecteur)
         reponse = self.client.get(reverse("chants:liste"), {"q": "louange"})

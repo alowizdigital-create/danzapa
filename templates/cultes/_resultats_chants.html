@@ -1,0 +1,17 @@
+{% if chants %}
+<ul class="liste-resultats">
+  {% for chant in chants %}
+  <li>
+    <button type="button" class="resultat" hx-post="{% url 'cultes:ajouter_chant' culte.pk %}" hx-vals='{"chant": "{{ chant.pk }}"}'
+            hx-include="#moment-chant" hx-target="#espace" hx-swap="outerHTML" data-ferme-apres>
+      <span class="liste-titre">{{ chant.titre }}{% if chant.pk in deja %} <span class="badge">déjà dans ce culte</span>{% endif %}</span>
+      <span class="liste-meta">{% if chant.auteur %}{{ chant.auteur }} · {% endif %}{% with premier=chant.couplets.all|first %}{% if premier %}{{ premier.lignes|first }}{% endif %}{% endwith %}</span>
+    </button>
+  </li>
+  {% endfor %}
+</ul>
+{% elif q %}
+  <p class="vide">Aucun chant ne correspond à « {{ q }} ».</p>
+{% else %}
+  <p class="vide">La bibliothèque est vide.</p>
+{% endif %}

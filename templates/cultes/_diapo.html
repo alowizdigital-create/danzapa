@@ -1,0 +1,3 @@
+<div class="diapo diapo-{{ diapo.type }}{% if diapo.masque %} diapo-masquee{% endif %}">
+  <div class="diapo-contenu">{% for ligne in diapo.lignes %}<p>{{ ligne }}</p>{% endfor %}</div>
+</div>

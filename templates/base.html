@@ -4,14 +4,17 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block titre %}Danzapa{% endblock %} · Danzapa</title>
+  <link rel="icon" href="{% static 'img/favicon.svg' %}" type="image/svg+xml">
   <link rel="stylesheet" href="{% static 'css/danzapa.css' %}">
+  {% block tete %}{% endblock %}
 </head>
-<body>
+<body class="{% block classe_body %}{% endblock %}" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
   {% if user.is_authenticated %}
   <header class="barre-titre">
     <nav class="barre-titre-gauche">
       <a class="logo" href="{% url 'accueil' %}"><span class="logo-icone">D</span> Danzapa</a>
       {% if perms.chants.view_chant %}<a class="onglet{% if request.resolver_match.app_name == 'chants' %} onglet-actif{% endif %}" href="{% url 'chants:liste' %}">Chants</a>{% endif %}
+      {% if perms.cultes.view_culte %}<a class="onglet{% if request.resolver_match.app_name == 'cultes' %} onglet-actif{% endif %}" href="{% url 'cultes:liste' %}">Cultes</a>{% endif %}
     </nav>
     <div class="barre-titre-droite">
       {% if user.is_staff %}<a class="bouton-lien" href="{% url 'admin:index' %}">Administration</a>{% endif %}
@@ -31,5 +34,6 @@
     {% endfor %}
     {% block contenu %}{% endblock %}
   </main>
+  {% block scripts %}{% endblock %}
 </body>
 </html>

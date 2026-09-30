@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% block titre %}Nouveau culte{% endblock %}
+
+{% block contenu %}
+<p><a class="bouton-lien" href="{% url 'cultes:liste' %}">← Cultes</a></p>
+<h1>Nouveau culte</h1>
+<form method="post" class="formulaire">
+  {% csrf_token %}
+  {% for champ in form %}
+  <div class="champ">
+    <label for="{{ champ.id_for_label }}">{{ champ.label }}</label>
+    {{ champ }}
+    {% if champ.help_text %}<small>{{ champ.help_text }}</small>{% endif %}
+    {% for erreur in champ.errors %}<small class="erreur">{{ erreur }}</small>{% endfor %}
+  </div>
+  {% endfor %}
+  <button type="submit" class="bouton-principal">Créer et préparer</button>
+</form>
+{% endblock %}

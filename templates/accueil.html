@@ -14,11 +14,18 @@
     <span class="badge badge-actif">Ouvrir</span>
   </a>
   {% endif %}
-  <div class="carte carte-bientot">
+  {% if perms.cultes.view_culte %}
+  <a class="carte carte-lien" href="{% if prochain_culte %}{{ prochain_culte.get_absolute_url }}{% else %}{% url 'cultes:liste' %}{% endif %}">
     <h2>Préparer un culte</h2>
-    <p>Composez la présentation du dimanche à partir des chants enregistrés.</p>
-    <span class="badge">Étape 3</span>
-  </div>
+    {% if prochain_culte %}
+      <p>Prochain : <strong>{{ prochain_culte.titre }}</strong> ({{ prochain_culte.get_statut_display|lower }}).</p>
+      <span class="badge badge-actif">Ouvrir</span>
+    {% else %}
+      <p>Composez la présentation du dimanche à partir des chants enregistrés.</p>
+      <span class="badge badge-actif">Voir les cultes</span>
+    {% endif %}
+  </a>
+  {% endif %}
   <div class="carte carte-bientot">
     <h2>Projection</h2>
     <p>Projetez en plein écran ou exportez en PowerPoint.</p>

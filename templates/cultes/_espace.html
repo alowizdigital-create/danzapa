@@ -1,0 +1,95 @@
+{# Vignettes, diapo courante, propriétés et barre d'état. Renvoyé après chaque modification (HTMX). #}
+<div id="espace" class="espace" data-selection="{{ selection|default_if_none:'' }}">
+  <datalist id="liste-moments">{% for m in moments %}<option value="{{ m }}">{% endfor %}</datalist>
+
+  <aside class="vignettes" aria-label="Diapositives">
+    {% for groupe in groupes %}{% if not groupe.element %}
+      <div class="groupe groupe-fixe">
+        {% for diapo in groupe.diapos %}
+          <button type="button" class="vignette" data-numero="{{ diapo.numero }}" data-element="" title="Bienvenue">
+            <span class="vignette-numero">{{ diapo.numero }}</span>
+            {% include "cultes/_diapo.html" %}
+          </button>
+        {% endfor %}
+      </div>
+    {% endif %}{% endfor %}
+
+    <div class="groupes"{% if peut_modifier %} data-reordonner="{% url 'cultes:reordonner' culte.pk %}"{% endif %}>
+      {% for groupe in groupes %}{% if groupe.element %}
+        <div class="groupe{% if groupe.element.masque %} groupe-masque{% endif %}" data-element="{{ groupe.element.pk }}">
+          <div class="groupe-entete" title="{% if peut_modifier %}Glisser pour déplacer tout l'élément{% endif %}">
+            {% if peut_modifier %}<span class="poignee" aria-hidden="true">⠿</span>{% endif %}
+            <span class="groupe-nom">{{ groupe.element.nom }}</span>
+            {% if groupe.element.masque %}<span class="badge">masqué</span>{% endif %}
+          </div>
+          {% for diapo in groupe.diapos %}
+            <button type="button" class="vignette" data-numero="{{ diapo.numero }}" data-element="{{ groupe.element.pk }}" title="{{ groupe.element.nom }} · {{ diapo.libelle }}">
+              <span class="vignette-numero">{{ diapo.numero }}</span>
+              {% include "cultes/_diapo.html" %}
+            </button>
+          {% endfor %}
+        </div>
+      {% endif %}{% endfor %}
+    </div>
+
+    {% if not a_des_elements %}
+      <p class="vignettes-vide">Aucun chant pour l'instant.{% if peut_modifier %}<br><button type="button" class="bouton-lien" data-dialogue="dlg-chant">Insérer un chant</button>{% endif %}</p>
+    {% endif %}
+  </aside>
+
+  <section class="centre">
+    <div class="scene">
+      <div id="diapo-grande" class="diapo diapo-grande"></div>
+    </div>
+
+    <div class="proprietes-zone">
+      <div class="proprietes" data-element="" hidden>
+        <h2>Diapo de bienvenue</h2>
+        <p class="aide">{% if peut_modifier %}Le texte se modifie dans l'onglet <strong>Création</strong>.{% else %}Première diapo du culte.{% endif %}</p>
+      </div>
+
+      {% for groupe in groupes %}{% with element=groupe.element %}{% if element %}
+      <div class="proprietes" data-element="{{ element.pk }}" hidden>
+        <h2>{{ element.nom }} <small>{{ element.get_type_display }}{% if element.masque %} · masqué{% endif %}</small></h2>
+        {% if peut_modifier %}
+          <form class="form-proprietes" hx-post="{% url 'cultes:modifier_element' culte.pk element.pk %}" hx-trigger="change" hx-target="#espace" hx-swap="outerHTML">
+            <label>Moment
+              <input name="moment" value="{{ element.moment }}" list="liste-moments" maxlength="100" placeholder="Ex. : Cantique d'entrée">
+            </label>
+            {% if element.type == "chant" %}
+              <label class="case"><input type="checkbox" name="repeter_refrain"{% if element.repeter_refrain %} checked{% endif %}> Répéter le refrain après chaque couplet</label>
+            {% else %}
+              <label>Titre <input name="titre" value="{{ element.titre }}" maxlength="200"></label>
+              <label class="large">Texte
+                <textarea name="contenu" rows="4">{{ element.contenu }}</textarea>
+                <small>Une ligne vide sépare deux diapos.</small>
+              </label>
+            {% endif %}
+          </form>
+          <div class="actions-element">
+            {% if element.type == "chant" and perms.chants.change_chant %}
+              <a class="bouton-secondaire" href="{% url 'chants:modification' element.chant.pk %}?next={{ culte.get_absolute_url|urlencode }}">Corriger les paroles</a>
+            {% endif %}
+            <button type="button" class="bouton-secondaire" data-action="masquer" hx-post="{% url 'cultes:basculer_masque' culte.pk element.pk %}" hx-target="#espace" hx-swap="outerHTML">{% if element.masque %}Afficher{% else %}Masquer{% endif %}</button>
+            <button type="button" class="bouton-secondaire" data-action="monter" hx-post="{% url 'cultes:deplacer_element' culte.pk element.pk %}" hx-vals='{"sens": "haut"}' hx-target="#espace" hx-swap="outerHTML" title="Monter">↑</button>
+            <button type="button" class="bouton-secondaire" data-action="descendre" hx-post="{% url 'cultes:deplacer_element' culte.pk element.pk %}" hx-vals='{"sens": "bas"}' hx-target="#espace" hx-swap="outerHTML" title="Descendre">↓</button>
+            <button type="button" class="bouton-secondaire bouton-retirer" data-action="supprimer" hx-post="{% url 'cultes:supprimer_element' culte.pk element.pk %}" hx-target="#espace" hx-swap="outerHTML"
+                    hx-confirm="Retirer « {{ element.nom }} » du culte ?{% if element.type == 'chant' %} Le chant reste dans la bibliothèque.{% endif %}">Retirer du culte</button>
+          </div>
+        {% elif element.moment %}
+          <p class="aide">Moment : {{ element.moment }}</p>
+        {% endif %}
+      </div>
+      {% endif %}{% endwith %}{% endfor %}
+    </div>
+  </section>
+
+  <footer class="barre-etat">
+    <span>Diapositive <b data-position>{% if total_diapos %}1{% else %}0{% endif %}</b> sur {{ total_diapos }}</span>
+    <span class="masque-mobile">Français (France)</span>
+    <span class="barre-etat-droite">
+      <button type="button" class="bouton-vue" data-vue="normal" title="Normal">▭ Normal</button>
+      <button type="button" class="bouton-vue" data-vue="trieuse" title="Trieuse de diapositives">▦ Trieuse</button>
+    </span>
+  </footer>
+</div>

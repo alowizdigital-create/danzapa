@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block titre %}Cultes{% endblock %}
+
+{% block contenu %}
+<div class="entete-page">
+  <div>
+    <h1>Cultes</h1>
+    <p class="sous-titre">Préparez la présentation de chaque culte à partir de la bibliothèque de chants.</p>
+  </div>
+  {% if perms.cultes.add_culte %}
+  <form method="post" action="{% url 'cultes:creation' %}" class="creation-rapide">
+    {% csrf_token %}
+    <label for="id_date">Nouveau culte le</label>
+    {{ form.date }}
+    <button type="submit" class="bouton-principal">+ Créer</button>
+  </form>
+  {% endif %}
+</div>
+
+<h2 class="titre-section">À venir</h2>
+{% if a_venir %}
+  <ul class="liste-cultes">{% for culte in a_venir %}{% include "cultes/_ligne_culte.html" %}{% endfor %}</ul>
+{% else %}
+  <p class="vide">Aucun culte prévu.{% if perms.cultes.add_culte %} Choisissez une date ci-dessus pour en préparer un.{% endif %}</p>
+{% endif %}
+
+{% if passes %}
+<h2 class="titre-section">Passés</h2>
+<ul class="liste-cultes">{% for culte in passes %}{% include "cultes/_ligne_culte.html" %}{% endfor %}</ul>
+{% endif %}
+{% endblock %}

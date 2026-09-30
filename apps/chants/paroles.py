@@ -69,6 +69,11 @@ def _blocs_bruts(texte):
         yield bloc
 
 
+def decouper_paragraphes(texte):
+    """Listes de lignes non vides, un paragraphe par ligne vide."""
+    return list(_blocs_bruts(texte or ""))
+
+
 def decouper(texte):
     """Transforme le texte collé en une liste de `Bloc`."""
     blocs = []

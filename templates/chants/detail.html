@@ -32,6 +32,18 @@
   {% endfor %}
 </div>
 
+<section class="utilisations">
+  {% if cultes %}
+    <h2>Utilisé dans {{ cultes|length }} culte{{ cultes|length|pluralize }}</h2>
+    <ul>
+      {% for pk, titre, date in cultes|slice:":8" %}<li><a href="{% url 'cultes:editeur' pk %}">{{ titre }}</a></li>{% endfor %}
+      {% if cultes|length > 8 %}<li>… et {{ cultes|length|add:"-8" }} autre{{ cultes|length|add:"-8"|pluralize }}</li>{% endif %}
+    </ul>
+  {% else %}
+    <h2>Pas encore utilisé dans un culte</h2>
+  {% endif %}
+</section>
+
 <p class="meta-bas">
   Ajouté le {{ chant.date_ajout|date:"j F Y" }}{% if chant.cree_par %} par {{ chant.cree_par.get_full_name|default:chant.cree_par.username }}{% endif %}
   · modifié le {{ chant.date_modification|date:"j F Y à H:i" }}

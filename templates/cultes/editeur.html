@@ -1,0 +1,189 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block titre %}{{ culte.titre }}{% endblock %}
+{% block classe_main %}editeur{% endblock %}
+
+{% block tete %}
+<script src="{% static 'vendor/htmx.min.js' %}" defer></script>
+<script src="{% static 'vendor/Sortable.min.js' %}" defer></script>
+<script src="{% static 'js/editeur.js' %}" defer></script>
+{% endblock %}
+
+{% block contenu %}
+<div class="barre-culte">
+  <a class="bouton-lien" href="{% url 'cultes:liste' %}" title="Tous les cultes">←</a>
+  {% if peut_modifier %}
+    <form class="form-titre" hx-post="{% url 'cultes:parametres' culte.pk %}" hx-trigger="change" hx-target="#espace" hx-swap="outerHTML">
+      <input class="titre-culte" name="titre" value="{{ culte.titre }}" maxlength="200" required aria-label="Nom du culte">
+    </form>
+    <form hx-post="{% url 'cultes:parametres' culte.pk %}" hx-trigger="change" hx-target="#espace" hx-swap="outerHTML">
+      <select name="statut" class="statut-choix" aria-label="Statut">
+        {% for valeur, libelle in culte.STATUTS %}<option value="{{ valeur }}"{% if culte.statut == valeur %} selected{% endif %}>{{ libelle }}</option>{% endfor %}
+      </select>
+    </form>
+  {% else %}
+    <h1 class="titre-culte">{{ culte.titre }}</h1>
+    <span class="badge">{{ culte.get_statut_display }}</span>
+  {% endif %}
+  <span class="date-culte masque-mobile">{{ culte.date|date:"l j F Y"|capfirst }}</span>
+  <span id="indicateur" class="indicateur" aria-live="polite">{% if peut_modifier %}✓ Enregistré{% else %}Lecture seule{% endif %}</span>
+</div>
+
+<div class="ruban">
+  <nav class="ruban-onglets" role="tablist">
+    <button type="button" role="tab" data-onglet="fichier">Fichier</button>
+    {% if peut_modifier %}
+      <button type="button" role="tab" data-onglet="accueil" class="actif">Accueil</button>
+      <button type="button" role="tab" data-onglet="insertion">Insertion</button>
+      <button type="button" role="tab" data-onglet="creation">Création</button>
+    {% endif %}
+    <button type="button" role="tab" data-onglet="diaporama">Diaporama</button>
+    <button type="button" role="tab" data-onglet="affichage"{% if not peut_modifier %} class="actif"{% endif %}>Affichage</button>
+  </nav>
+
+  <div class="ruban-panneau" data-panneau="fichier" hidden>
+    <div class="ruban-groupe">
+      {% if perms.cultes.add_culte %}
+        <a class="outil" href="{% url 'cultes:creation' %}"><span class="outil-icone">＋</span>Nouveau culte</a>
+        <button type="button" class="outil" data-dialogue="dlg-dupliquer"><span class="outil-icone">⧉</span>Dupliquer</button>
+      {% endif %}
+      <a class="outil" href="{% url 'cultes:liste' %}"><span class="outil-icone">☰</span>Tous les cultes</a>
+      <span class="ruban-libelle">Culte</span>
+    </div>
+    <div class="ruban-groupe">
+      <button type="button" class="outil" disabled title="Disponible à l'étape 4"><span class="outil-icone">⇩</span>Exporter en PowerPoint</button>
+      <span class="ruban-libelle">Exporter</span>
+    </div>
+    {% if perms.cultes.delete_culte %}
+    <div class="ruban-groupe">
+      <a class="outil" href="{% url 'cultes:suppression' culte.pk %}"><span class="outil-icone">🗑</span>Supprimer le culte</a>
+      <span class="ruban-libelle">Gérer</span>
+    </div>
+    {% endif %}
+  </div>
+
+  {% if peut_modifier %}
+  <div class="ruban-panneau" data-panneau="accueil">
+    <div class="ruban-groupe">
+      <button type="button" class="outil" data-dialogue="dlg-chant"><span class="outil-icone">♪</span>Insérer un chant</button>
+      <button type="button" class="outil" data-dialogue="dlg-texte"><span class="outil-icone">▤</span>Nouvelle diapo</button>
+      <span class="ruban-libelle">Diapositives</span>
+    </div>
+    <div class="ruban-groupe">
+      <button type="button" class="outil" data-cible="masquer"><span class="outil-icone">◌</span>Masquer / afficher</button>
+      <button type="button" class="outil" data-cible="monter"><span class="outil-icone">↑</span>Monter</button>
+      <button type="button" class="outil" data-cible="descendre"><span class="outil-icone">↓</span>Descendre</button>
+      <button type="button" class="outil" data-cible="supprimer"><span class="outil-icone">✕</span>Retirer</button>
+      <span class="ruban-libelle">Élément sélectionné</span>
+    </div>
+  </div>
+
+  <div class="ruban-panneau" data-panneau="insertion" hidden>
+    <div class="ruban-groupe">
+      <button type="button" class="outil" data-dialogue="dlg-chant"><span class="outil-icone">♪</span>Chant de la bibliothèque</button>
+      {% if perms.chants.add_chant %}
+        <a class="outil" href="{% url 'cultes:nouveau_chant' culte.pk %}"><span class="outil-icone">✎</span>Nouveau chant</a>
+      {% endif %}
+      <span class="ruban-libelle">Chants</span>
+    </div>
+    <div class="ruban-groupe">
+      <button type="button" class="outil" data-dialogue="dlg-texte"><span class="outil-icone">▤</span>Texte libre</button>
+      <button type="button" class="outil" disabled title="Disponible à l'étape 6"><span class="outil-icone">✝</span>Verset biblique</button>
+      <span class="ruban-libelle">Textes</span>
+    </div>
+  </div>
+
+  <div class="ruban-panneau" data-panneau="creation" hidden>
+    <form class="ruban-groupe ruban-form" hx-post="{% url 'cultes:parametres' culte.pk %}" hx-trigger="change" hx-target="#espace" hx-swap="outerHTML">
+      <label>Texte de bienvenue
+        <textarea name="texte_bienvenue" rows="2" placeholder="Vide : pas de diapo de bienvenue">{{ culte.texte_bienvenue }}</textarea>
+      </label>
+      <span class="ruban-libelle">Première diapo</span>
+    </form>
+    <form class="ruban-groupe ruban-form" hx-post="{% url 'cultes:parametres' culte.pk %}" hx-trigger="change" hx-target="#espace" hx-swap="outerHTML">
+      <label>Lignes par diapo
+        <input type="number" name="lignes_par_diapo" min="1" max="12" value="{{ culte.lignes_par_diapo }}">
+      </label>
+      <span class="ruban-libelle">Paroles</span>
+    </form>
+    <div class="ruban-groupe">
+      <button type="button" class="outil" disabled title="Disponible à l'étape 4"><span class="outil-icone">◐</span>Thèmes</button>
+      <span class="ruban-libelle">Thèmes</span>
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="ruban-panneau" data-panneau="diaporama" hidden>
+    <div class="ruban-groupe">
+      <button type="button" class="outil" disabled title="Disponible à l'étape 5"><span class="outil-icone">▶</span>À partir du début</button>
+      <button type="button" class="outil" disabled title="Disponible à l'étape 5"><span class="outil-icone">▷</span>À partir de la diapo actuelle</button>
+      <button type="button" class="outil" disabled title="Disponible à l'étape 5"><span class="outil-icone">⧉</span>Mode présentateur</button>
+      <span class="ruban-libelle">Projection (étape 5)</span>
+    </div>
+  </div>
+
+  <div class="ruban-panneau" data-panneau="affichage"{% if peut_modifier %} hidden{% endif %}>
+    <div class="ruban-groupe">
+      <button type="button" class="outil" data-vue="normal"><span class="outil-icone">▭</span>Normal</button>
+      <button type="button" class="outil" data-vue="trieuse"><span class="outil-icone">▦</span>Trieuse de diapositives</button>
+      <span class="ruban-libelle">Affichages</span>
+    </div>
+  </div>
+</div>
+
+{% include "cultes/_espace.html" %}
+
+{% if peut_modifier %}
+<dialog id="dlg-chant" class="dialogue" aria-labelledby="dlg-chant-titre">
+  <div class="dialogue-entete">
+    <h2 id="dlg-chant-titre">Insérer un chant</h2>
+    <button type="button" class="bouton-lien" data-fermer>✕</button>
+  </div>
+  <label>Moment du culte
+    <input id="moment-chant" name="moment" value="{{ moment_suggere }}" list="liste-moments" maxlength="100" placeholder="Ex. : Cantique d'entrée">
+  </label>
+  <label>Chercher dans la bibliothèque
+    <input type="search" name="q" placeholder="Titre, auteur, tag ou paroles…" autocomplete="off"
+           hx-get="{% url 'cultes:chercher_chants' culte.pk %}" hx-trigger="input changed delay:250ms, search" hx-target="#resultats-chants">
+  </label>
+  <div id="resultats-chants" class="resultats-chants" hx-get="{% url 'cultes:chercher_chants' culte.pk %}" hx-trigger="load"></div>
+  {% if perms.chants.add_chant %}
+    <p class="aide">Le chant n'est pas dans la bibliothèque ? <a href="{% url 'cultes:nouveau_chant' culte.pk %}" data-avec-moment>Saisir un nouveau chant</a></p>
+  {% endif %}
+</dialog>
+
+<dialog id="dlg-texte" class="dialogue" aria-labelledby="dlg-texte-titre">
+  <form hx-post="{% url 'cultes:ajouter_texte' culte.pk %}" hx-target="#espace" hx-swap="outerHTML" data-ferme-apres>
+    <div class="dialogue-entete">
+      <h2 id="dlg-texte-titre">Nouvelle diapo de texte</h2>
+      <button type="button" class="bouton-lien" data-fermer>✕</button>
+    </div>
+    <label>Moment <input name="moment" list="liste-moments" maxlength="100" placeholder="Ex. : Annonces"></label>
+    <label>Titre <input name="titre" maxlength="200"></label>
+    <label>Texte
+      <textarea name="contenu" rows="6"></textarea>
+      <small>Une ligne vide sépare deux diapos.</small>
+    </label>
+    <button type="submit" class="bouton-principal">Ajouter</button>
+  </form>
+</dialog>
+{% endif %}
+
+{% if perms.cultes.add_culte %}
+<dialog id="dlg-dupliquer" class="dialogue" aria-labelledby="dlg-dupliquer-titre">
+  <form method="post" action="{% url 'cultes:dupliquer' culte.pk %}">
+    {% csrf_token %}
+    <div class="dialogue-entete">
+      <h2 id="dlg-dupliquer-titre">Dupliquer ce culte</h2>
+      <button type="button" class="bouton-lien" data-fermer>✕</button>
+    </div>
+    <p class="aide">Tous les chants et textes sont copiés dans un nouveau culte.</p>
+    <label>Date du nouveau culte
+      <input type="date" name="date" value="{{ form_duplication.date.value|date:'Y-m-d' }}" required>
+    </label>
+    <button type="submit" class="bouton-principal">Dupliquer</button>
+  </form>
+</dialog>
+{% endif %}
+{% endblock %}
