@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+
+{% block titre %}Changer le mot de passe{% endblock %}
+
+{% block contenu %}
+<h1>Changer le mot de passe</h1>
+<form method="post" class="formulaire">
+  {% csrf_token %}
+  {{ form.as_p }}
+  <button type="submit" class="bouton-principal">Enregistrer</button>
+</form>
+{% endblock %}

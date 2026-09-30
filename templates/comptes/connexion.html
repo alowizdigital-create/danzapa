@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block titre %}Connexion{% endblock %}
+{% block classe_main %}page-connexion{% endblock %}
+
+{% block contenu %}
+<form method="post" class="boite-connexion">
+  {% csrf_token %}
+  <div class="logo logo-grand"><span class="logo-icone">D</span> Danzapa</div>
+  <p class="sous-titre">Chants, cultes et projection</p>
+
+  {% if form.non_field_errors %}
+    <p class="message message-error">Nom d'utilisateur ou mot de passe incorrect.</p>
+  {% endif %}
+
+  <label for="id_username">Nom d'utilisateur</label>
+  <input type="text" name="username" id="id_username" autocomplete="username" required autofocus value="{{ form.username.value|default:'' }}">
+
+  <label for="id_password">Mot de passe</label>
+  <input type="password" name="password" id="id_password" autocomplete="current-password" required>
+
+  <input type="hidden" name="next" value="{{ next }}">
+  <button type="submit" class="bouton-principal">Se connecter</button>
+</form>
+{% endblock %}

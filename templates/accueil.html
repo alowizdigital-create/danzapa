@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block titre %}Accueil{% endblock %}
+
+{% block contenu %}
+<h1>Bonjour {{ user.first_name|default:user.username }}</h1>
+<p class="sous-titre">Rôle : <strong>{{ user.role }}</strong></p>
+
+<div class="cartes">
+  <div class="carte carte-bientot">
+    <h2>Bibliothèque de chants</h2>
+    <p>Enregistrez chaque chant une fois pour le réutiliser à chaque culte.</p>
+    <span class="badge">Étape 2</span>
+  </div>
+  <div class="carte carte-bientot">
+    <h2>Préparer un culte</h2>
+    <p>Composez la présentation du dimanche à partir des chants enregistrés.</p>
+    <span class="badge">Étape 3</span>
+  </div>
+  <div class="carte carte-bientot">
+    <h2>Projection</h2>
+    <p>Projetez en plein écran ou exportez en PowerPoint.</p>
+    <span class="badge">Étapes 4 et 5</span>
+  </div>
+</div>
+{% endblock %}

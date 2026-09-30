@@ -21,6 +21,7 @@ staticfiles/
 # Secrets
 .env
 .env.*
+!.env.example
 
 # Éditeurs et systèmes
 .vscode/

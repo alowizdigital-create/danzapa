@@ -1,0 +1,32 @@
+{% load static %}<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block titre %}Danzapa{% endblock %} · Danzapa</title>
+  <link rel="stylesheet" href="{% static 'css/danzapa.css' %}">
+</head>
+<body>
+  {% if user.is_authenticated %}
+  <header class="barre-titre">
+    <a class="logo" href="{% url 'accueil' %}"><span class="logo-icone">D</span> Danzapa</a>
+    <div class="barre-titre-droite">
+      {% if user.is_staff %}<a class="bouton-lien" href="{% url 'admin:index' %}">Administration</a>{% endif %}
+      <a class="bouton-lien" href="{% url 'comptes:mot_de_passe' %}">Mot de passe</a>
+      <form method="post" action="{% url 'comptes:deconnexion' %}">
+        {% csrf_token %}
+        <button type="submit" class="bouton-lien">Déconnexion</button>
+      </form>
+      <span class="avatar" title="{{ user.get_full_name|default:user.username }} · {{ user.role }}">{{ user.username|slice:":2"|upper }}</span>
+    </div>
+  </header>
+  {% endif %}
+
+  <main class="{% block classe_main %}contenu{% endblock %}">
+    {% for message in messages %}
+      <p class="message message-{{ message.tags }}">{{ message }}</p>
+    {% endfor %}
+    {% block contenu %}{% endblock %}
+  </main>
+</body>
+</html>

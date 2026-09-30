@@ -55,7 +55,7 @@ Les rôles s'appuient sur les groupes et permissions de Django.
 
 ## Stack technique
 
-- Python 3.12+, Django 5
+- Python 3.11+, Django 5.2
 - Templates Django + HTMX, SortableJS pour le glisser-déposer
 - `python-pptx` pour l'export PowerPoint
 - SQLite en développement, PostgreSQL en production
@@ -76,14 +76,14 @@ danzapa/
 
 ## Feuille de route
 
-1. **Fondations** : projet Django, authentification, rôles, admin.
+1. ✅ **Fondations** : projet Django, authentification, rôles, admin.
 2. **Bibliothèque de chants** : CRUD, recherche, import de paroles collées avec découpage automatique.
 3. **Préparation d'un culte** : éditeur façon PowerPoint, ajout de chants, réordonnancement.
 4. **Export PowerPoint** : génération du `.pptx` selon le thème.
 5. **Mode projection** : plein écran, clavier, vue présentateur.
 6. **Module Bible** : import d'une version libre de droits, recherche, projection de versets.
 
-## Installation (à venir)
+## Installation
 
 ```bash
 git clone https://github.com/alowizdigital-create/danzapa.git
@@ -96,4 +96,24 @@ python manage.py createsuperuser
 python manage.py runserver
 ```
 
-Ces commandes fonctionneront à partir de l'étape 1 de la feuille de route.
+Ouvrir ensuite http://127.0.0.1:8000 et se connecter avec le compte créé.
+
+La configuration passe par des variables d'environnement, toutes optionnelles en développement : voir [`.env.example`](.env.example). En production, définir au minimum `DJANGO_DEBUG=false`, `DJANGO_SECRET_KEY` et `DJANGO_ALLOWED_HOSTS`.
+
+## Utilisateurs et rôles
+
+Les trois rôles sont créés automatiquement par `migrate` sous forme de groupes Django :
+
+| Rôle | Droits |
+|------|--------|
+| Administrateur | Gère les utilisateurs et tout le contenu, accède à `/admin/` |
+| Éditeur | Crée, modifie et supprime chants, cultes et thèmes |
+| Lecteur | Consulte les chants et les cultes, lance la projection |
+
+Pour ajouter quelqu'un : `/admin/` → **Utilisateurs** → **Ajouter**, puis cocher son groupe. Pour qu'un administrateur accède à `/admin/`, cocher aussi « Statut équipe ».
+
+## Tests
+
+```bash
+python manage.py test
+```

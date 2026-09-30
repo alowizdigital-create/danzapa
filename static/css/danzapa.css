@@ -1,0 +1,164 @@
+/* Danzapa : style de base, inspiré de PowerPoint Web. */
+
+:root {
+  --accent: #c43e1c;          /* rouge PowerPoint */
+  --accent-fonce: #a33416;
+  --fond: #f3f2f1;
+  --surface: #ffffff;
+  --texte: #242424;
+  --texte-doux: #616161;
+  --bordure: #e1dfdd;
+  --rayon: 6px;
+  font-family: "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--fond);
+  color: var(--texte);
+}
+
+/* Barre de titre */
+.barre-titre {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.5rem 1rem;
+  background: var(--surface);
+  border-bottom: 1px solid var(--bordure);
+}
+.barre-titre-droite { display: flex; align-items: center; gap: 0.5rem; }
+.barre-titre-droite form { margin: 0; }
+
+.logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  color: var(--texte);
+  text-decoration: none;
+}
+.logo-icone {
+  display: inline-grid;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 700;
+}
+.logo-grand { font-size: 1.5rem; justify-content: center; width: 100%; }
+
+.avatar {
+  display: inline-grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  border: 1px solid var(--bordure);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.bouton-lien {
+  background: none;
+  border: 1px solid transparent;
+  border-radius: var(--rayon);
+  padding: 0.35rem 0.6rem;
+  font: inherit;
+  font-size: 0.9rem;
+  color: var(--texte);
+  text-decoration: none;
+  cursor: pointer;
+}
+.bouton-lien:hover { background: var(--fond); border-color: var(--bordure); }
+
+.bouton-principal {
+  display: inline-block;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: var(--rayon);
+  padding: 0.6rem 1.2rem;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.bouton-principal:hover { background: var(--accent-fonce); }
+
+/* Contenu */
+.contenu { max-width: 1100px; margin: 0 auto; padding: 1.5rem 1rem; }
+h1 { margin: 0 0 0.25rem; font-weight: 600; }
+.sous-titre { color: var(--texte-doux); margin: 0 0 1.5rem; }
+
+.cartes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1rem;
+}
+.carte {
+  background: var(--surface);
+  border: 1px solid var(--bordure);
+  border-radius: var(--rayon);
+  padding: 1rem 1.25rem;
+}
+.carte h2 { font-size: 1.1rem; margin: 0 0 0.5rem; }
+.carte p { color: var(--texte-doux); margin: 0 0 0.75rem; }
+.carte-bientot { opacity: 0.85; }
+.badge {
+  display: inline-block;
+  font-size: 0.75rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  background: var(--fond);
+  color: var(--texte-doux);
+}
+
+/* Messages */
+.message {
+  padding: 0.6rem 0.9rem;
+  border-radius: var(--rayon);
+  background: #e8f1fb;
+}
+.message-error { background: #fde7e9; color: #a4262c; }
+.message-success { background: #dff6dd; }
+
+/* Formulaires */
+.formulaire { max-width: 420px; }
+.formulaire input,
+.boite-connexion input[type="text"],
+.boite-connexion input[type="password"] {
+  width: 100%;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--bordure);
+  border-radius: var(--rayon);
+  font: inherit;
+}
+.formulaire .helptext, .formulaire ul { color: var(--texte-doux); font-size: 0.85rem; }
+
+/* Page de connexion */
+.page-connexion {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+}
+.boite-connexion {
+  width: 100%;
+  max-width: 360px;
+  background: var(--surface);
+  border: 1px solid var(--bordure);
+  border-radius: var(--rayon);
+  padding: 2rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  text-align: left;
+}
+.boite-connexion .sous-titre { text-align: center; }
+.boite-connexion label { font-size: 0.9rem; margin-top: 0.5rem; }
+.boite-connexion .bouton-principal { margin-top: 1rem; }
