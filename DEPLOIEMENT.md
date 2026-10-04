@@ -84,9 +84,11 @@ Dokploy fait la redirection HTTP → HTTPS et transmet l'en-tête `X-Forwarded-P
 1. Cliquez sur **Deploy**. Suivez l'onglet **Deployments / Logs**. La construction prend 1 à 3 minutes. À la fin, vous devez voir :
    ```
    Administrateur « admin » créé.
-   ==========================================================
-     Mot de passe provisoire de « admin » : xxxxxxxxxxxxxxxx
-   ==========================================================
+   ============================================================
+     Créé le 04/10/2026 09:00
+     Identifiant : admin
+     Mot de passe provisoire : k7mq-x3vp-9rtd-h2wa
+   ============================================================
    Listening at: http://0.0.0.0:8000
    ```
    Notez ce mot de passe : il n'est affiché qu'au premier démarrage. Il apparaît dans les logs du **conteneur** (onglet Logs de l'application), pas forcément dans ceux de la construction.
@@ -95,7 +97,24 @@ Dokploy fait la redirection HTTP → HTTPS et transmet l'en-tête `X-Forwarded-P
    - **Éditeur** : prépare les cultes et gère les chants ;
    - **Lecteur** : consulte, exporte et projette ;
    - **Administrateur** : gère aussi les comptes. Cochez en plus « Statut équipe » pour qu'il accède à l'administration.
-4. Mot de passe provisoire perdu avant la première connexion ? Ouvrez le terminal du conteneur dans Dokploy et lancez `python manage.py changepassword admin`.
+4. Mot de passe refusé ou perdu : voir la section suivante.
+
+## Mot de passe incorrect ou oublié
+
+Si plusieurs blocs « Mot de passe provisoire » apparaissent dans les logs, seul **le plus récent** (voir « Créé le ») est valable. S'il y en a un à chaque déploiement, le volume `/data` manque : les logs affichent alors « ATTENTION : aucun volume n'est monté sur /data » (étape 4).
+
+Pour choisir un nouveau mot de passe, deux méthodes :
+
+- **Avec le terminal** (onglet **Terminal** de l'application dans Dokploy, ou en SSH `docker exec -it $(docker ps -qf "name=danzapa" | head -1) sh`) :
+  ```bash
+  python manage.py changepassword admin
+  ```
+- **Sans terminal** : dans l'onglet **Environment**, ajoutez
+  ```env
+  DJANGO_SUPERUSER_PASSWORD=VotreNouveauMotDePasse
+  DJANGO_SUPERUSER_RESET=1
+  ```
+  Puis **Deploy**. Les logs affichent « Mot de passe de « admin » remplacé ». Connectez-vous, puis **retirez ces deux lignes** et redéployez, sinon le mot de passe serait réimposé à chaque démarrage.
 
 Pour vérifier que l'application répond : `https://danzapa.zweey.com/sante/` affiche `ok`. C'est aussi le healthcheck du conteneur.
 
@@ -130,7 +149,8 @@ python manage.py sauvegarde
 | **Bad Request (400)** | Le domaine n'est pas dans `DJANGO_ALLOWED_HOSTS` | Corriger `config/production.env`, redéployer |
 | **Erreur CSRF (403)** à la connexion | Le site est ouvert par une adresse différente de `DJANGO_ALLOWED_HOSTS`, ou sans HTTPS | Ouvrir `https://` + le sous-domaine ; si besoin, définir `DJANGO_CSRF_TRUSTED_ORIGINS=https://danzapa.zweey.com` |
 | **Bad Gateway (502)** | Mauvais port dans le domaine, ou le conteneur a planté | Container Port = `8000` ; lire les logs du conteneur |
-| Données perdues après un redéploiement | Pas de volume sur `/data` | Ajouter le volume (étape 4) avant de ressaisir |
+| Données perdues après un redéploiement, « ATTENTION : aucun volume » dans les logs | Pas de volume sur `/data` | Ajouter le volume (étape 4) avant de ressaisir |
+| « Mot de passe incorrect » pour `admin` | Mot de passe d'un ancien démarrage, ou faute de frappe | Section « Mot de passe incorrect ou oublié » |
 | Pas de certificat HTTPS | Le DNS ne pointe pas encore vers le VPS | Attendre la propagation, puis régénérer le certificat |
 
 ## Et si Nginx est devant Dokploy ?

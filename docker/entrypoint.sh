@@ -13,6 +13,17 @@ fi
 
 mkdir -p "$DATA/media"
 
+# Sans volume monté sur /data, la base est dans le conteneur : elle (et le compte
+# administrateur) seraient perdus au prochain déploiement.
+if [ "$(stat -c %d "$DATA")" = "$(stat -c %d /)" ]; then
+    echo "############################################################"
+    echo "  ATTENTION : aucun volume n'est monté sur $DATA."
+    echo "  Les chants, cultes et comptes seront PERDUS au prochain"
+    echo "  déploiement. Dokploy → Advanced → Volumes : ajouter un"
+    echo "  Volume Mount « danzapa-data » sur $DATA, puis redéployer."
+    echo "############################################################"
+fi
+
 python manage.py migrate --noinput
 
 # Premier administrateur (voir apps/comptes/management/commands/premier_admin.py).

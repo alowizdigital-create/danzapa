@@ -27,7 +27,9 @@ RUN DJANGO_SECRET_KEY=construction-uniquement python manage.py collectstatic --n
 # Le conteneur démarre en root uniquement pour donner /data à l'utilisateur
 # « danzapa » (utile si le volume est un dossier de l'hôte appartenant à root),
 # puis l'entrypoint relance tout sous cet utilisateur non privilégié.
-VOLUME ["/data"]
+# Pas d'instruction VOLUME : un volume anonyme serait recréé à chaque
+# déploiement (données perdues sans avertissement). Le volume nommé se
+# déclare dans Dokploy ; l'entrypoint prévient s'il manque.
 EXPOSE 8000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \

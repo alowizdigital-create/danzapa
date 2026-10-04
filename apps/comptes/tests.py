@@ -164,7 +164,7 @@ class PremierAdminTests(TestCase):
         from django.core.management import call_command
 
         sortie = StringIO()
-        variables = {"DJANGO_SUPERUSER_USERNAME": "", "DJANGO_SUPERUSER_PASSWORD": "", **env}
+        variables = {"DJANGO_SUPERUSER_USERNAME": "", "DJANGO_SUPERUSER_PASSWORD": "", "DJANGO_SUPERUSER_RESET": "", **env}
         with mock.patch.dict(os.environ, variables):
             call_command("premier_admin", stdout=sortie)
         return sortie.getvalue()
@@ -173,7 +173,8 @@ class PremierAdminTests(TestCase):
         import re
 
         sortie = self.appeler(DJANGO_SUPERUSER_USERNAME="admin")
-        mot_de_passe = re.search(r"provisoire de « admin » : (\S+)", sortie).group(1)
+        mot_de_passe = re.search(r"Mot de passe provisoire : (\S+)", sortie).group(1)
+        self.assertRegex(mot_de_passe, r"^[a-hjkmnp-z2-9]{4}(-[a-hjkmnp-z2-9]{4}){3}$")
         admin = Utilisateur.objects.get(username="admin")
         self.assertTrue(admin.is_superuser and admin.check_password(mot_de_passe))
         self.assertEqual(admin.role, roles.ADMINISTRATEUR)
@@ -187,3 +188,16 @@ class PremierAdminTests(TestCase):
     def test_sans_identifiant_rien(self):
         self.appeler()
         self.assertFalse(Utilisateur.objects.exists())
+
+    def test_reinitialisation_seulement_avec_reset(self):
+        self.appeler(DJANGO_SUPERUSER_USERNAME="admin", DJANGO_SUPERUSER_PASSWORD="Ancien-2026")
+        admin = Utilisateur.objects.get(username="admin")
+        self.appeler(DJANGO_SUPERUSER_USERNAME="admin", DJANGO_SUPERUSER_PASSWORD="Nouveau-2026")
+        admin.refresh_from_db()
+        self.assertTrue(admin.check_password("Ancien-2026"))
+        sortie = self.appeler(
+            DJANGO_SUPERUSER_USERNAME="admin", DJANGO_SUPERUSER_PASSWORD="Nouveau-2026", DJANGO_SUPERUSER_RESET="1"
+        )
+        admin.refresh_from_db()
+        self.assertTrue(admin.check_password("Nouveau-2026"))
+        self.assertIn("remplacé", sortie)
