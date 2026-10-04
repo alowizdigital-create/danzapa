@@ -1,10 +1,13 @@
 """Paramètres Django du projet Danzapa.
 
-Les valeurs sensibles ou propres à l'environnement se lisent dans les
-variables d'environnement (voir `.env.example`).
+Les valeurs propres à l'environnement se lisent dans les variables
+d'environnement (voir `.env.example`), avec pour valeurs par défaut celles de
+`config/production.env` (versionné, sans aucun secret).
 """
 
 import os
+import secrets
+import time
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -18,13 +21,60 @@ def env_list(nom, defaut=""):
     return [v.strip() for v in os.environ.get(nom, defaut).split(",") if v.strip()]
 
 
+def charger_fichier_env(chemin):
+    """Lit des lignes NOM=valeur comme valeurs par défaut.
+
+    Les variables déjà définies (onglet « Environment » de Dokploy) restent
+    prioritaires ; les lignes vides, les commentaires et les valeurs vides
+    sont ignorés.
+    """
+    if not chemin.exists():
+        return
+    for ligne in chemin.read_text(encoding="utf-8").splitlines():
+        ligne = ligne.strip()
+        if not ligne or ligne.startswith("#") or "=" not in ligne:
+            continue
+        nom, valeur = (morceau.strip() for morceau in ligne.split("=", 1))
+        if valeur:
+            os.environ.setdefault(nom, valeur)
+
+
+def cle_persistante(chemin):
+    """Clé secrète générée une fois puis conservée dans le volume de données.
+
+    Évite de devoir la saisir dans Dokploy. La création exclusive (O_EXCL)
+    empêche deux processus de générer chacun une clé différente.
+    """
+    chemin.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        descripteur = os.open(chemin, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    except FileExistsError:
+        for _ in range(50):  # un autre processus est peut-être en train de l'écrire
+            cle = chemin.read_text().strip()
+            if cle:
+                return cle
+            time.sleep(0.1)
+        raise RuntimeError(f"Clé secrète vide dans {chemin}.")
+    cle = secrets.token_urlsafe(50)
+    with os.fdopen(descripteur, "w") as fichier:
+        fichier.write(cle)
+    return cle
+
+
+charger_fichier_env(BASE_DIR / "config" / "production.env")
+
 DEBUG = env_bool("DJANGO_DEBUG", True)
+
+# Données persistantes (base SQLite, images envoyées, clé secrète). Dans l'image
+# Docker, DATA_DIR=/data : un seul volume à monter pour tout conserver.
+DATA_DIR = Path(os.environ.get("DATA_DIR", BASE_DIR))
 
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY")
 if not SECRET_KEY:
-    if not DEBUG:
-        raise RuntimeError("DJANGO_SECRET_KEY doit être défini en production.")
-    SECRET_KEY = "django-insecure-dev-uniquement-ne-pas-utiliser-en-production"
+    if DEBUG:
+        SECRET_KEY = "django-insecure-dev-uniquement-ne-pas-utiliser-en-production"
+    else:
+        SECRET_KEY = cle_persistante(DATA_DIR / "secret_key")
 
 # localhost reste toujours autorisé : le healthcheck du conteneur l'interroge en interne.
 ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS") + ["localhost", "127.0.0.1"]
@@ -36,9 +86,6 @@ def origines_https(hotes):
 
 CSRF_TRUSTED_ORIGINS = env_list("DJANGO_CSRF_TRUSTED_ORIGINS") or origines_https(ALLOWED_HOSTS)
 
-# Données persistantes (base SQLite et images envoyées). Dans l'image Docker,
-# DATA_DIR=/data : un seul volume à monter pour tout conserver.
-DATA_DIR = Path(os.environ.get("DATA_DIR", BASE_DIR))
 
 INSTALLED_APPS = [
     "django.contrib.admin",

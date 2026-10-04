@@ -1,6 +1,6 @@
 # Déployer Danzapa avec Dokploy (VPS Hostinger)
 
-Ce guide met Danzapa en ligne sur un VPS qui fait déjà tourner **Dokploy**, à une adresse du type `https://danzapa.votre-domaine.org`.
+Ce guide met Danzapa en ligne sur un VPS qui fait déjà tourner **Dokploy**, à l'adresse `https://danzapa.zweey.com`.
 
 L'application tourne dans un seul conteneur Docker, décrit par le `Dockerfile` du dépôt :
 
@@ -17,10 +17,10 @@ L'application tourne dans un seul conteneur Docker, décrit par le `Dockerfile` 
 
 1. Dans **hPanel → Domaines → votre domaine → DNS / Serveurs de noms**, ajoutez un enregistrement :
    - **Type** : `A`
-   - **Nom** : `danzapa` (pour `danzapa.votre-domaine.org`)
+   - **Nom** : `danzapa` (pour `danzapa.zweey.com`)
    - **Pointe vers** : l'adresse IP de votre VPS (hPanel → VPS → Aperçu)
    - **TTL** : par défaut
-2. La propagation prend de quelques minutes à une heure. Pour vérifier : `ping danzapa.votre-domaine.org` doit répondre avec l'IP du VPS.
+2. La propagation prend de quelques minutes à une heure. Pour vérifier : `ping danzapa.zweey.com` doit répondre avec l'IP du VPS.
 
 ## 2. Créer l'application dans Dokploy
 
@@ -33,26 +33,28 @@ L'application tourne dans un seul conteneur Docker, décrit par le `Dockerfile` 
    - ou **GitHub**, si Dokploy est déjà relié à votre compte GitHub : même dépôt, même branche.
 4. **Build Type** : `Dockerfile`. Docker File : `Dockerfile`. Contexte : `.` (la racine).
 
-## 3. Variables d'environnement
+## 3. Réglages : le fichier `config/production.env`
 
-Onglet **Environment**, collez en adaptant :
+Les réglages sont dans le fichier **[`config/production.env`](config/production.env)** du dépôt. Rien à coller dans Dokploy :
 
 ```env
-DJANGO_SECRET_KEY=COLLER_ICI_UNE_CLE_LONGUE_ET_ALEATOIRE
-DJANGO_ALLOWED_HOSTS=danzapa.votre-domaine.org
+DJANGO_ALLOWED_HOSTS=danzapa.zweey.com
 DJANGO_TIME_ZONE=Europe/Paris
 DJANGO_SUPERUSER_USERNAME=admin
-DJANGO_SUPERUSER_PASSWORD=UnMotDePasseSolide-2026
-DJANGO_SUPERUSER_EMAIL=vous@exemple.org
+DJANGO_SUPERUSER_EMAIL=
 ```
 
-- **`DJANGO_SECRET_KEY`** : générez-la une fois et ne la changez plus (sinon tout le monde est déconnecté). Sur le VPS :
-  ```bash
-  python3 -c "import secrets; print(secrets.token_urlsafe(50))"
-  ```
-- **`DJANGO_ALLOWED_HOSTS`** : exactement le sous-domaine, sans `https://`.
-- **`DJANGO_TIME_ZONE`** : le fuseau de l'église (`Africa/Kinshasa`, `Africa/Abidjan`, `Europe/Brussels`…), pour les dates et heures affichées.
-- Les trois variables **`DJANGO_SUPERUSER_*`** créent le premier administrateur au premier démarrage. Elles ne servent plus ensuite (voir l'étape 6).
+- **`DJANGO_ALLOWED_HOSTS`** : l'adresse du site, sans `https://`.
+- **`DJANGO_TIME_ZONE`** : le fuseau de l'église (`Africa/Kinshasa`, `Africa/Abidjan`, `Europe/Paris`…).
+- **`DJANGO_SUPERUSER_USERNAME`** : l'identifiant du premier administrateur.
+
+Pour changer un réglage, modifiez le fichier sur GitHub (icône crayon), validez, puis **Deploy** dans Dokploy.
+
+**Pas de secret dans ce fichier** : le dépôt est public.
+
+- La **clé secrète** est générée automatiquement au premier démarrage et conservée dans le volume (`/data/secret_key`).
+- Le **mot de passe** du premier administrateur est généré et affiché une seule fois dans les logs (étape 6).
+- Pour imposer vos propres valeurs, ajoutez `DJANGO_SECRET_KEY` ou `DJANGO_SUPERUSER_PASSWORD` dans l'onglet **Environment** de Dokploy, jamais dans le dépôt. Une variable de cet onglet est toujours prioritaire sur le fichier.
 
 `DJANGO_DEBUG=false` et `DATA_DIR=/data` sont déjà réglés dans l'image. Les autres variables possibles sont dans [`.env.example`](.env.example).
 
@@ -70,7 +72,7 @@ Sans ce volume, **tous les chants et cultes seraient perdus à chaque redéploie
 
 Onglet **Domains → Add Domain** :
 
-- **Host** : `danzapa.votre-domaine.org`
+- **Host** : `danzapa.zweey.com`
 - **Path** : `/`
 - **Container Port** : `8000`
 - **HTTPS** : activé, **Certificate** : `Let's Encrypt`
@@ -82,16 +84,20 @@ Dokploy fait la redirection HTTP → HTTPS et transmet l'en-tête `X-Forwarded-P
 1. Cliquez sur **Deploy**. Suivez l'onglet **Deployments / Logs**. La construction prend 1 à 3 minutes. À la fin, vous devez voir :
    ```
    Administrateur « admin » créé.
+   ==========================================================
+     Mot de passe provisoire de « admin » : xxxxxxxxxxxxxxxx
+   ==========================================================
    Listening at: http://0.0.0.0:8000
    ```
-2. Ouvrez `https://danzapa.votre-domaine.org` et connectez-vous avec `admin`.
+   Notez ce mot de passe : il n'est affiché qu'au premier démarrage. Il apparaît dans les logs du **conteneur** (onglet Logs de l'application), pas forcément dans ceux de la construction.
+2. Ouvrez `https://danzapa.zweey.com`, connectez-vous avec `admin` et le mot de passe provisoire, puis changez-le tout de suite (**Mot de passe**, en haut à droite).
 3. Créez les comptes de l'équipe : **Administration** (en haut à droite) → **Utilisateurs → Ajouter**. Choisissez ensuite le **groupe** de chacun :
    - **Éditeur** : prépare les cultes et gère les chants ;
    - **Lecteur** : consulte, exporte et projette ;
    - **Administrateur** : gère aussi les comptes. Cochez en plus « Statut équipe » pour qu'il accède à l'administration.
-4. Par sécurité, supprimez ensuite **`DJANGO_SUPERUSER_PASSWORD`** des variables d'environnement. Le compte reste, et le mot de passe se change dans l'application (**Mot de passe**).
+4. Mot de passe provisoire perdu avant la première connexion ? Ouvrez le terminal du conteneur dans Dokploy et lancez `python manage.py changepassword admin`.
 
-Pour vérifier que l'application répond : `https://danzapa.votre-domaine.org/sante/` affiche `ok`. C'est aussi le healthcheck du conteneur.
+Pour vérifier que l'application répond : `https://danzapa.zweey.com/sante/` affiche `ok`. C'est aussi le healthcheck du conteneur.
 
 ## 7. Mettre à jour
 
@@ -121,9 +127,8 @@ python manage.py sauvegarde
 
 | Symptôme | Cause probable | Solution |
 |---|---|---|
-| **Bad Request (400)** | Le domaine n'est pas dans `DJANGO_ALLOWED_HOSTS` | Mettre exactement le sous-domaine, redéployer |
-| **Erreur CSRF (403)** à la connexion | Le site est ouvert par une adresse différente de `DJANGO_ALLOWED_HOSTS`, ou sans HTTPS | Ouvrir `https://` + le sous-domaine ; si besoin, définir `DJANGO_CSRF_TRUSTED_ORIGINS=https://danzapa.votre-domaine.org` |
-| Le conteneur s'arrête : `DJANGO_SECRET_KEY doit être défini` | Variable manquante | Ajouter la clé (étape 3) |
+| **Bad Request (400)** | Le domaine n'est pas dans `DJANGO_ALLOWED_HOSTS` | Corriger `config/production.env`, redéployer |
+| **Erreur CSRF (403)** à la connexion | Le site est ouvert par une adresse différente de `DJANGO_ALLOWED_HOSTS`, ou sans HTTPS | Ouvrir `https://` + le sous-domaine ; si besoin, définir `DJANGO_CSRF_TRUSTED_ORIGINS=https://danzapa.zweey.com` |
 | **Bad Gateway (502)** | Mauvais port dans le domaine, ou le conteneur a planté | Container Port = `8000` ; lire les logs du conteneur |
 | Données perdues après un redéploiement | Pas de volume sur `/data` | Ajouter le volume (étape 4) avant de ressaisir |
 | Pas de certificat HTTPS | Le DNS ne pointe pas encore vers le VPS | Attendre la propagation, puis régénérer le certificat |

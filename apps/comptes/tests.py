@@ -113,3 +113,77 @@ class SauvegardeTests(TestCase):
                 groupes = [n for (n,) in base.execute("SELECT name FROM auth_group")]
                 base.close()
                 self.assertIn("Éditeur", groupes)
+
+
+class ConfigurationProductionTests(TestCase):
+    def test_fichier_env_valeurs_par_defaut_sans_ecraser(self):
+        import os
+        import tempfile
+        from pathlib import Path
+        from unittest import mock
+
+        from config.settings import charger_fichier_env
+
+        with tempfile.TemporaryDirectory() as dossier:
+            fichier = Path(dossier) / "production.env"
+            fichier.write_text("# commentaire\nDANZAPA_A=fichier\nDANZAPA_B=fichier\nDANZAPA_VIDE=\n\n", encoding="utf-8")
+            with mock.patch.dict(os.environ, {"DANZAPA_B": "dokploy"}, clear=False):
+                charger_fichier_env(fichier)
+                self.assertEqual(os.environ["DANZAPA_A"], "fichier")
+                self.assertEqual(os.environ["DANZAPA_B"], "dokploy")
+                self.assertNotIn("DANZAPA_VIDE", os.environ)
+                os.environ.pop("DANZAPA_A")
+
+    def test_fichier_versionne_sans_secret(self):
+        from django.conf import settings
+
+        contenu = (settings.BASE_DIR / "config" / "production.env").read_text(encoding="utf-8")
+        lignes = [l for l in contenu.splitlines() if l.strip() and not l.startswith("#")]
+        self.assertFalse([l for l in lignes if "PASSWORD" in l or "SECRET" in l])
+
+    def test_cle_secrete_generee_une_fois(self):
+        import tempfile
+        from pathlib import Path
+
+        from config.settings import cle_persistante
+
+        with tempfile.TemporaryDirectory() as dossier:
+            chemin = Path(dossier) / "data" / "secret_key"
+            cle = cle_persistante(chemin)
+            self.assertGreater(len(cle), 40)
+            self.assertEqual(cle_persistante(chemin), cle)
+            self.assertEqual(chemin.stat().st_mode & 0o777, 0o600)
+
+
+class PremierAdminTests(TestCase):
+    def appeler(self, **env):
+        import os
+        from io import StringIO
+        from unittest import mock
+
+        from django.core.management import call_command
+
+        sortie = StringIO()
+        variables = {"DJANGO_SUPERUSER_USERNAME": "", "DJANGO_SUPERUSER_PASSWORD": "", **env}
+        with mock.patch.dict(os.environ, variables):
+            call_command("premier_admin", stdout=sortie)
+        return sortie.getvalue()
+
+    def test_mot_de_passe_provisoire_affiche_une_fois(self):
+        import re
+
+        sortie = self.appeler(DJANGO_SUPERUSER_USERNAME="admin")
+        mot_de_passe = re.search(r"provisoire de « admin » : (\S+)", sortie).group(1)
+        admin = Utilisateur.objects.get(username="admin")
+        self.assertTrue(admin.is_superuser and admin.check_password(mot_de_passe))
+        self.assertEqual(admin.role, roles.ADMINISTRATEUR)
+        self.assertEqual(self.appeler(DJANGO_SUPERUSER_USERNAME="admin"), "")
+
+    def test_mot_de_passe_fourni(self):
+        sortie = self.appeler(DJANGO_SUPERUSER_USERNAME="chef", DJANGO_SUPERUSER_PASSWORD="Fourni-2026")
+        self.assertNotIn("provisoire", sortie)
+        self.assertTrue(Utilisateur.objects.get(username="chef").check_password("Fourni-2026"))
+
+    def test_sans_identifiant_rien(self):
+        self.appeler()
+        self.assertFalse(Utilisateur.objects.exists())
