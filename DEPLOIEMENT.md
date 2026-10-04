@@ -29,7 +29,7 @@ L'application tourne dans un seul conteneur Docker, décrit par le `Dockerfile` 
 3. Onglet **General → Provider** :
    - **Git** (dépôt public, aucun accès GitHub à donner) :
      - Repository URL : `https://github.com/alowizdigital-create/danzapa.git`
-     - Branch : `claude/cool-mendel-9ooxmr`
+     - Branch : `main`
    - ou **GitHub**, si Dokploy est déjà relié à votre compte GitHub : même dépôt, même branche.
 4. **Build Type** : `Dockerfile`. Docker File : `Dockerfile`. Contexte : `.` (la racine).
 
