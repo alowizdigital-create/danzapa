@@ -1,3 +1,4 @@
-<div class="diapo diapo-{{ diapo.type }}{% if diapo.masque %} diapo-masquee{% endif %}"{% if diapo.taille_cqw %} style="--taille: {{ diapo.taille_cqw }}"{% endif %}>
-  <div class="diapo-contenu">{% for ligne in diapo.lignes %}<p>{{ ligne }}</p>{% endfor %}</div>
+{# Une diapo : vignette ou grande diapo. Les chants affichent leur HTML nettoyé (apps/chants/mise_en_forme.py). #}
+<div class="diapo diapo-{{ diapo.type }}{% if diapo.masque %} diapo-masquee{% endif %}" style="{% if diapo.taille_cqw %}--taille: {{ diapo.taille_cqw }};{% endif %}{% if diapo.couleur_fond %} background: {{ diapo.couleur_fond }};{% endif %}" data-alignement="{{ diapo.alignement }}" data-echelle="{{ diapo.echelle }}" data-fond="{{ diapo.couleur_fond }}">
+  <div class="diapo-contenu aligner-{{ diapo.alignement }}">{% if diapo.html %}{{ diapo.html|safe }}{% else %}{% for ligne in diapo.lignes %}<p>{{ ligne }}</p>{% endfor %}{% endif %}</div>
 </div>

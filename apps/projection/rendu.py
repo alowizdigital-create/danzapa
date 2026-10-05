@@ -73,7 +73,9 @@ def taille_pt(diapo, theme):
         taille = min(taille, largeur / (plus_longue * chasse))
     taille = min(taille, hauteur / (len(lignes) * INTERLIGNE))
     nominale = taille_nominale(diapo, theme)
-    return max(min(TAILLE_MIN, nominale), min(taille, nominale))
+    taille = max(min(TAILLE_MIN, nominale), min(taille, nominale))
+    # Taille choisie pour la diapo (A+ / A−), appliquée après l'ajustement automatique.
+    return taille * (getattr(diapo, "echelle", 100) or 100) / 100
 
 
 def annoter(groupes, theme):

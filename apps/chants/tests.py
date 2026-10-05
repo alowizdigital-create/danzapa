@@ -1,13 +1,10 @@
-from django.contrib.auth.models import Group
-from django.test import TestCase
-from django.urls import reverse
+from django.db import connection
+from django.db.migrations.executor import MigrationExecutor
+from django.test import TestCase, TransactionTestCase
 
-from apps.comptes import roles
-from apps.comptes.models import Utilisateur
-
-from . import paroles
-from .models import Chant
-from .recherche import normaliser
+from . import mise_en_forme, paroles
+from .models import Chant, DiapoChant
+from .recherche import filtrer, normaliser
 
 SANS_ATTENDRE = """1. Sans attendre
 Je veux tendre
@@ -70,101 +67,119 @@ class RechercheTests(TestCase):
         self.assertEqual(normaliser("Qui S’ÉLANCE  Noël"), "qui s elance noel")
 
 
-def utilisateur(nom, role):
-    u = Utilisateur.objects.create_user(nom, password="x")
-    u.groups.add(Group.objects.get(name=role))
-    return u
+class DecoupageLignesTests(TestCase):
+    def test_repartition_equilibree(self):
+        self.assertEqual([len(p) for p in paroles.decouper_lignes(list("abcdef"), 4)], [3, 3])
+
+    def test_moins_que_le_maximum(self):
+        self.assertEqual(paroles.decouper_lignes(["a", "b"], 4), [["a", "b"]])
+
+    def test_vide(self):
+        self.assertEqual(paroles.decouper_lignes([], 4), [])
+
+    def test_paroles_collees_en_diapos_sans_repeter_le_refrain(self):
+        self.assertEqual(
+            paroles.en_diapos(SANS_ATTENDRE),
+            [
+                "1. Sans attendre\nJe veux tendre\nAu bonheur promis",
+                "Donc en route\nPoint de doute\nLe but est si grand",
+                "2. Qui s’élance\nQui s’avance\nObtiendra le prix",
+            ],
+        )
 
 
-class VuesTests(TestCase):
+class MiseEnFormeTests(TestCase):
+    def test_mise_en_forme_conservee(self):
+        html = 'Sans attendre<div>Je <b>veux</b> <i><u>tendre</u></i></div><div><font color="#FF0000">Au bonheur</font></div>'
+        self.assertEqual(
+            mise_en_forme.nettoyer(html),
+            "<div>Sans attendre</div><div>Je <b>veux</b> <i><u>tendre</u></i></div>"
+            '<div><span style="color: #ff0000">Au bonheur</span></div>',
+        )
+
+    def test_styles_css_du_navigateur(self):
+        html = '<span style="font-weight: 700; color: rgb(255, 204, 0); position: fixed">Jaune</span>'
+        self.assertEqual(mise_en_forme.nettoyer(html), '<div><b><span style="color: #ffcc00">Jaune</span></b></div>')
+
+    def test_code_dangereux_retire(self):
+        html = (
+            '<script>alert(1)</script><img src=x onerror=alert(1)><a href="javascript:x">lien</a>'
+            '<div onclick="x" style="background:url(x)">texte</div><span style="color: red; expression(x)">!</span>'
+        )
+        propre = mise_en_forme.nettoyer(html)
+        for interdit in ("script", "alert", "img", "onerror", "href", "onclick", "background", "expression", "red"):
+            self.assertNotIn(interdit, propre)
+        self.assertEqual(mise_en_forme.texte_brut(html), "lien\ntexte\n!")
+
+    def test_pas_gras_explicite_conserve(self):
+        # Le thème met les paroles en gras : « G » sur un mot produit font-weight: normal.
+        html = '1. Sans <span style="font-weight: normal;">attendre</span>'
+        propre = mise_en_forme.nettoyer(html)
+        self.assertEqual(propre, '<div>1. Sans <span style="font-weight: normal">attendre</span></div>')
+        morceaux = mise_en_forme.lignes(propre)[0]
+        self.assertEqual([(m.texte, m.style.gras) for m in morceaux], [("1. Sans ", None), ("attendre", False)])
+        self.assertEqual(mise_en_forme.nettoyer(propre), propre)
+
+    def test_texte_echappe(self):
+        self.assertEqual(mise_en_forme.nettoyer("&lt;b&gt;x&lt;/b&gt;"), "<div>&lt;b&gt;x&lt;/b&gt;</div>")
+
+    def test_lignes_vides_internes_gardees_bords_retires(self):
+        html = "<div><br></div><div>a</div><div><br></div><div>b</div><div><br></div>"
+        self.assertEqual(mise_en_forme.texte_brut(html), "a\n\nb")
+
+    def test_couleurs(self):
+        self.assertEqual(mise_en_forme.couleur_valide("#ABC"), "#aabbcc")
+        self.assertEqual(mise_en_forme.couleur_valide("rgb(1, 2, 300)"), "#0102ff")
+        self.assertIsNone(mise_en_forme.couleur_valide("red; x"))
+
+
+class DiapoChantTests(TestCase):
     def setUp(self):
-        self.editeur = utilisateur("editeur", roles.EDITEUR)
-        self.lecteur = utilisateur("lecteur", roles.LECTEUR)
-        self.chant = Chant.objects.create(titre="Sans attendre je veux tendre", tags="entrée, louange")
+        self.chant = Chant.objects.create(titre="Sans attendre je veux tendre", tags="entrée")
+
+    def test_enregistrement_nettoie_et_extrait_le_texte(self):
+        diapo = DiapoChant.objects.create(chant=self.chant, ordre=1, contenu="1. Sans <b>attendre</b><script>x</script>")
+        self.assertEqual(diapo.contenu, "<div>1. Sans <b>attendre</b></div>")
+        self.assertEqual(diapo.texte, "1. Sans attendre")
+
+    def test_echelle_bornee(self):
+        diapo = DiapoChant.objects.create(chant=self.chant, ordre=1, echelle=500)
+        self.assertEqual(diapo.echelle, 200)
+
+    def test_paroles_collees_et_recherche_dans_les_diapos(self):
         self.chant.remplacer_paroles(SANS_ATTENDRE)
+        self.assertEqual(self.chant.diapos.count(), 3)
+        self.assertEqual(self.chant.premiere_ligne, "1. Sans attendre")
+        self.assertIn(self.chant, filtrer(Chant.objects.all(), "s'elance PRIX"))
+        self.assertIn(self.chant, filtrer(Chant.objects.all(), "entree"))
 
-    def test_anonyme_redirige_vers_connexion(self):
-        reponse = self.client.get(reverse("chants:liste"))
-        self.assertEqual(reponse.status_code, 302)
-        self.assertIn(reverse("comptes:connexion"), reponse.url)
 
-    def test_lecteur_consulte_mais_ne_modifie_pas(self):
-        self.client.force_login(self.lecteur)
-        self.assertEqual(self.client.get(reverse("chants:liste")).status_code, 200)
-        self.assertEqual(self.client.get(self.chant.get_absolute_url()).status_code, 200)
-        self.assertEqual(self.client.get(reverse("chants:creation")).status_code, 403)
-        url = reverse("chants:modification", args=[self.chant.pk])
-        self.assertEqual(self.client.get(url).status_code, 403)
-        url = reverse("chants:suppression", args=[self.chant.pk])
-        self.assertEqual(self.client.post(url).status_code, 403)
+class MigrationCoupletsTests(TransactionTestCase):
+    """Les chants saisis avant le passage aux diapos sont convertis sans perte."""
 
-    def test_recherche_sans_accents_dans_les_paroles(self):
-        self.client.force_login(self.lecteur)
-        reponse = self.client.get(reverse("chants:liste"), {"q": "s'elance PRIX"})
-        self.assertContains(reponse, "Sans attendre je veux tendre")
-        reponse = self.client.get(reverse("chants:liste"), {"q": "inexistant"})
-        self.assertNotContains(reponse, "Sans attendre je veux tendre")
+    avant = [("chants", "0003_alter_chant_options")]
+    apres = [("chants", "0006_delete_couplet")]
 
-    def test_tri_alphabetique_sans_accents(self):
-        Chant.objects.create(titre="À toi la gloire").remplacer_paroles("1. A")
-        Chant.objects.create(titre="Zachée").remplacer_paroles("1. Z")
-        self.client.force_login(self.lecteur)
-        reponse = self.client.get(reverse("chants:liste"))
-        titres = [c.titre for c in reponse.context["chant_list"]]
-        self.assertEqual(titres, ["À toi la gloire", "Sans attendre je veux tendre", "Zachée"])
+    def tearDown(self):
+        executeur = MigrationExecutor(connection)
+        executeur.loader.build_graph()
+        executeur.migrate(executeur.loader.graph.leaf_nodes())
 
-    def test_recherche_par_tag(self):
-        self.client.force_login(self.lecteur)
-        reponse = self.client.get(reverse("chants:liste"), {"q": "louange"})
-        self.assertContains(reponse, "Sans attendre je veux tendre")
+    def test_couplets_convertis_en_diapos(self):
+        executeur = MigrationExecutor(connection)
+        executeur.migrate(self.avant)
+        anciennes = executeur.loader.project_state(self.avant).apps
+        Chant_ = anciennes.get_model("chants", "Chant")
+        Couplet = anciennes.get_model("chants", "Couplet")
+        chant = Chant_.objects.create(titre="Ancien chant")
+        Couplet.objects.create(chant=chant, ordre=1, type="couplet", numero=1, texte="a\nb\nc\nd\ne\nf")
+        Couplet.objects.create(chant=chant, ordre=2, type="refrain", texte="Refrain <b>")
 
-    def test_editeur_cree_un_chant(self):
-        self.client.force_login(self.editeur)
-        reponse = self.client.post(
-            reverse("chants:creation"),
-            {"titre": "À toi la gloire", "auteur": "", "langue": "Français", "tags": "",
-             "paroles": "1. À toi la gloire\nÔ Ressuscité\n\nRefrain\nÀ toi la victoire"},
-        )
-        chant = Chant.objects.get(titre="À toi la gloire")
-        self.assertRedirects(reponse, chant.get_absolute_url())
-        self.assertEqual(chant.cree_par, self.editeur)
-        self.assertEqual([c.libelle for c in chant.couplets.all()], ["Couplet 1", "Refrain"])
-        self.assertIn("ressuscite", chant.recherche)
-
-    def test_modification_remplace_les_paroles(self):
-        self.client.force_login(self.editeur)
-        url = reverse("chants:modification", args=[self.chant.pk])
-        self.assertContains(self.client.get(url), "1. Sans attendre")
-        self.client.post(url, {"titre": self.chant.titre, "auteur": "", "langue": "Français",
-                               "tags": "", "paroles": "Nouveau texte"})
-        self.assertEqual(list(self.chant.couplets.values_list("texte", flat=True)), ["Nouveau texte"])
-
-    def test_doublon_refuse(self):
-        self.client.force_login(self.editeur)
-        reponse = self.client.post(
-            reverse("chants:creation"),
-            {"titre": "sans attendre je veux tendre", "auteur": "", "langue": "Français",
-             "tags": "", "paroles": "Texte"},
-        )
-        self.assertContains(reponse, "existe déjà")
-        self.assertEqual(Chant.objects.count(), 1)
-
-    def test_paroles_vides_refusees(self):
-        self.client.force_login(self.editeur)
-        reponse = self.client.post(
-            reverse("chants:creation"),
-            {"titre": "Vide", "auteur": "", "langue": "Français", "tags": "", "paroles": "Refrain\n\n"},
-        )
-        self.assertContains(reponse, "aucun couplet")
-        self.assertFalse(Chant.objects.filter(titre="Vide").exists())
-
-    def test_suppression(self):
-        self.client.force_login(self.editeur)
-        reponse = self.client.post(reverse("chants:suppression", args=[self.chant.pk]))
-        self.assertRedirects(reponse, reverse("chants:liste"))
-        self.assertFalse(Chant.objects.exists())
-
-    def test_roles_recoivent_les_permissions_des_chants(self):
-        self.assertTrue(self.editeur.has_perm("chants.add_chant"))
-        self.assertTrue(self.lecteur.has_perm("chants.view_chant"))
-        self.assertFalse(self.lecteur.has_perm("chants.add_chant"))
+        executeur = MigrationExecutor(connection)
+        executeur.loader.build_graph()
+        executeur.migrate(self.apres)
+        nouvelles = executeur.loader.project_state(self.apres).apps
+        Diapo = nouvelles.get_model("chants", "DiapoChant")
+        diapos = list(Diapo.objects.filter(chant_id=chant.pk).order_by("ordre"))
+        self.assertEqual([d.texte for d in diapos], ["1. a\nb\nc", "d\ne\nf", "Refrain <b>"])
+        self.assertEqual(diapos[2].contenu, "<div>Refrain &lt;b&gt;</div>")

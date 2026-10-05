@@ -1,11 +1,12 @@
 from datetime import date
 
 from django.contrib.auth.models import Group
+import json
+
 from django.test import TestCase
 from django.urls import reverse
 
-from apps.chants import paroles
-from apps.chants.models import Chant
+from apps.chants.models import Chant, DiapoChant
 from apps.comptes import roles
 from apps.comptes.models import Utilisateur
 
@@ -26,63 +27,6 @@ Obtiendra le prix
 """
 
 
-def blocs(texte):
-    return paroles.decouper(texte)
-
-
-def types(liste):
-    return [(b.type, b.numero) for b in liste]
-
-
-class OrdreDeLectureTests(TestCase):
-    def test_refrain_rejoue_apres_chaque_couplet(self):
-        ordre = diapos.ordre_de_lecture(blocs(SANS_ATTENDRE))
-        self.assertEqual(
-            types(ordre),
-            [("couplet", 1), ("refrain", None), ("couplet", 2), ("refrain", None)],
-        )
-
-    def test_option_desactivee_garde_l_ordre_saisi(self):
-        ordre = diapos.ordre_de_lecture(blocs(SANS_ATTENDRE), repeter_refrain=False)
-        self.assertEqual(types(ordre), [("couplet", 1), ("refrain", None), ("couplet", 2)])
-
-    def test_refrain_en_tete(self):
-        ordre = diapos.ordre_de_lecture(blocs("Refrain\nR\n\n1. A\n\n2. B"))
-        self.assertEqual(
-            types(ordre),
-            [("refrain", None), ("couplet", 1), ("refrain", None), ("couplet", 2), ("refrain", None)],
-        )
-
-    def test_refrain_deja_ecrit_pas_double(self):
-        texte = "1. A\n\nRefrain\nR\n\n2. B\n\nRefrain\nR"
-        ordre = diapos.ordre_de_lecture(blocs(texte))
-        self.assertEqual(len(ordre), 4)
-
-    def test_dernier_refrain_rencontre(self):
-        texte = "1. A\n\nRefrain\nPremier\n\n2. B\n\nRefrain\nSecond\n\n3. C"
-        ordre = diapos.ordre_de_lecture(blocs(texte))
-        self.assertEqual(ordre[-1].texte, "Second")
-
-    def test_chant_sans_refrain(self):
-        ordre = diapos.ordre_de_lecture(blocs("1. A\n\n2. B"))
-        self.assertEqual(types(ordre), [("couplet", 1), ("couplet", 2)])
-
-
-class DecoupageLignesTests(TestCase):
-    def test_repartition_equilibree(self):
-        paquets = diapos.decouper_lignes(list("abcdef"), 4)
-        self.assertEqual([len(p) for p in paquets], [3, 3])
-
-    def test_moins_que_le_maximum(self):
-        self.assertEqual(diapos.decouper_lignes(["a", "b"], 4), [["a", "b"]])
-
-    def test_neuf_lignes(self):
-        self.assertEqual([len(p) for p in diapos.decouper_lignes(list("abcdefghi"), 4)], [3, 3, 3])
-
-    def test_vide(self):
-        self.assertEqual(diapos.decouper_lignes([], 4), [])
-
-
 class DiaposDuCulteTests(TestCase):
     def setUp(self):
         self.chant = Chant.objects.create(titre="Sans attendre je veux tendre")
@@ -97,22 +41,28 @@ class DiaposDuCulteTests(TestCase):
 
     def test_structure_de_la_presentation(self):
         liste = diapos.diapos_du_culte(self.culte)
-        self.assertEqual(
-            [d.type for d in liste],
-            ["bienvenue", "titre", "paroles", "paroles", "paroles", "paroles"],
-        )
+        self.assertEqual([d.type for d in liste], ["bienvenue", "titre", "paroles", "paroles", "paroles"])
         self.assertEqual(liste[0].lignes, ["Bienvenus", "dans la", "maison du Seigneur"])
         self.assertEqual(liste[1].lignes, ["Cantique d'entrée : Sans attendre je veux tendre"])
         self.assertEqual(liste[2].lignes, ["1. Sans attendre", "Je veux tendre", "Au bonheur promis"])
+        self.assertEqual(liste[2].html, "<div>1. Sans attendre</div><div>Je veux tendre</div><div>Au bonheur promis</div>")
+        # Le refrain n'est plus répété automatiquement : les diapos sont jouées telles que saisies.
         self.assertEqual(liste[3].lignes[0], "De mon Dieu je suis l'enfant")
         self.assertEqual(liste[4].lignes[0], "2. Qui s'élance")
-        self.assertEqual([d.numero for d in liste], [1, 2, 3, 4, 5, 6])
+        self.assertEqual([d.numero for d in liste], [1, 2, 3, 4, 5])
+        self.assertEqual({d.chant_id for d in liste[1:]}, {self.chant.pk})
 
-    def test_lignes_par_diapo(self):
-        self.culte.lignes_par_diapo = 2
+    def test_reglages_de_la_diapo(self):
+        piece = self.chant.diapos.first()
+        piece.alignement, piece.echelle, piece.couleur_fond = "gauche", 150, "#123456"
+        piece.save()
+        diapo = diapos.diapos_du_culte(self.culte)[2]
+        self.assertEqual((diapo.alignement, diapo.echelle, diapo.couleur_fond, diapo.piece_id), ("gauche", 150, "#123456", piece.pk))
+
+    def test_paroles_collees_par_paquets(self):
+        self.chant.remplacer_paroles(SANS_ATTENDRE, lignes_par_diapo=2)
         liste = diapos.diapos_du_culte(self.culte)
-        couplet1 = [d for d in liste if d.libelle == "Couplet 1"]
-        self.assertEqual([d.lignes for d in couplet1], [["1. Sans attendre", "Je veux tendre"], ["Au bonheur promis"]])
+        self.assertEqual([d.lignes for d in liste[2:4]], [["1. Sans attendre", "Je veux tendre"], ["Au bonheur promis"]])
 
     def test_sans_bienvenue(self):
         self.culte.texte_bienvenue = "  "
@@ -204,25 +154,31 @@ class VuesTests(TestCase):
         element = self.culte.elements.get()
         self.assertEqual((element.type, element.contenu), (ElementCulte.TEXTE, "Réunion mardi"))
 
-    def test_nouveau_chant_ajoute_a_la_bibliotheque_et_au_culte(self):
-        reponse = self.client.post(
-            self.url("nouveau_chant"),
-            {"moment": "Offrande", "titre": "Nouveau", "auteur": "", "langue": "Français", "tags": "", "paroles": "1. Texte"},
-        )
-        self.assertRedirects(reponse, self.culte.get_absolute_url())
+    def test_nouveau_chant_cree_et_ouvert_en_edition(self):
+        reponse = self.hx_post(self.url("creer_chant"), {"titre": "Nouveau", "tags": "louange", "moment": "Offrande", "paroles": ""})
+        self.assertEqual(reponse.status_code, 200)
         chant = Chant.objects.get(titre="Nouveau")
         element = self.culte.elements.get()
-        self.assertEqual((element.chant, element.moment), (chant, "Offrande"))
+        piece = chant.diapos.get()
+        self.assertEqual((element.chant, element.moment, piece.contenu), (chant, "Offrande", ""))
+        self.assertContains(reponse, f'data-edition="{chant.pk}"')
+        self.assertContains(reponse, f'data-piece="{piece.pk}"')
+        self.assertEqual(chant.cree_par, self.editeur)
+
+    def test_nouveau_chant_avec_paroles_collees(self):
+        self.hx_post(self.url("creer_chant"), {"titre": "Collé", "paroles": SANS_ATTENDRE})
+        self.assertEqual(Chant.objects.get(titre="Collé").diapos.count(), 3)
+
+    def test_nouveau_chant_doublon_refuse(self):
+        reponse = self.hx_post(self.url("creer_chant"), {"titre": "sans attendre je veux tendre"})
+        self.assertEqual(reponse.status_code, 400)
+        self.assertIn("existe déjà", reponse.content.decode())
 
     def test_proprietes_de_l_element(self):
         element = self.ajouter(self.chant)
         self.hx_post(self.url("modifier_element", element.pk), {"moment": "Louange"})
         element.refresh_from_db()
         self.assertEqual(element.moment, "Louange")
-        self.assertFalse(element.repeter_refrain)  # case décochée : non envoyée
-        self.hx_post(self.url("modifier_element", element.pk), {"moment": "Louange", "repeter_refrain": "on"})
-        element.refresh_from_db()
-        self.assertTrue(element.repeter_refrain)
 
     def test_masquer_puis_afficher(self):
         element = self.ajouter(self.chant)
@@ -299,34 +255,116 @@ class VuesTests(TestCase):
         self.assertEqual(self.client.get(self.url("ajouter_chant")).status_code, 405)
 
 
-class LienAvecLaBibliothequeTests(TestCase):
+class SaisieDesChantsTests(TestCase):
+    """Saisie et mise en forme des chants directement dans l'éditeur."""
+
     def setUp(self):
         self.editeur = utilisateur("editeur", roles.EDITEUR)
+        self.lecteur = utilisateur("lecteur", roles.LECTEUR)
         self.client.force_login(self.editeur)
         self.chant = Chant.objects.create(titre="Sans attendre je veux tendre")
         self.chant.remplacer_paroles(SANS_ATTENDRE)
         self.culte = Culte.objects.create(date=date(2026, 9, 20))
-        ElementCulte.objects.create(culte=self.culte, ordre=1, type=ElementCulte.CHANT, chant=self.chant)
+        self.element = ElementCulte.objects.create(culte=self.culte, ordre=1, type=ElementCulte.CHANT, chant=self.chant)
+        self.pieces = list(self.chant.diapos.all())
 
-    def test_chant_utilise_non_supprimable(self):
-        reponse = self.client.post(reverse("chants:suppression", args=[self.chant.pk]), follow=True)
+    def url(self, nom, *args):
+        return reverse(f"cultes:{nom}", args=[self.culte.pk, self.chant.pk, *args])
+
+    def hx_post(self, url, donnees=None):
+        return self.client.post(url, donnees or {}, headers={"HX-Request": "true"})
+
+    def ordre(self):
+        return list(self.chant.diapos.values_list("pk", flat=True))
+
+    def test_sauvegarde_automatique_d_une_diapo(self):
+        piece = self.pieces[0]
+        reponse = self.client.post(
+            self.url("enregistrer_diapo", piece.pk),
+            {"contenu": '1. Sans <b>attendre</b><div><font color="#ffd700">Je veux</font> tendre</div><script>x</script>',
+             "alignement": "gauche", "echelle": "120", "couleur_fond": "#001122"},
+        )
+        donnees = json.loads(reponse.content)
+        self.assertEqual(
+            donnees["contenu"],
+            '<div>1. Sans <b>attendre</b></div><div><span style="color: #ffd700">Je veux</span> tendre</div>',
+        )
+        self.assertTrue(donnees["taille"].endswith("cqw"))
+        piece.refresh_from_db()
+        self.assertEqual((piece.texte, piece.alignement, piece.echelle, piece.couleur_fond),
+                         ("1. Sans attendre\nJe veux tendre", "gauche", 120, "#001122"))
+        self.chant.refresh_from_db()
+        self.assertIn("je veux tendre", self.chant.recherche)
+
+    def test_reglages_invalides_refuses(self):
+        reponse = self.client.post(self.url("enregistrer_diapo", self.pieces[0].pk), {"couleur_fond": "red;x"})
+        self.assertEqual(reponse.status_code, 400)
+
+    def test_ajouter_apres_et_dupliquer(self):
+        premiere = self.pieces[0]
+        reponse = self.hx_post(self.url("ajouter_diapo"), {"apres": premiere.pk})
+        ids = self.ordre()
+        self.assertEqual(len(ids), 4)
+        nouvelle = DiapoChant.objects.get(pk=ids[1])
+        self.assertEqual(nouvelle.contenu, "")
+        self.assertContains(reponse, f'data-piece="{nouvelle.pk}"')
+        self.hx_post(self.url("ajouter_diapo"), {"dupliquer": premiere.pk})
+        ids = self.ordre()
+        self.assertEqual(DiapoChant.objects.get(pk=ids[1]).texte, premiere.texte)
+
+    def test_ajouter_en_fin_sans_reference(self):
+        self.hx_post(self.url("ajouter_diapo"))
+        self.assertEqual(DiapoChant.objects.get(pk=self.ordre()[-1]).contenu, "")
+
+    def test_supprimer_deplacer_reordonner(self):
+        a, b, c = (p.pk for p in self.pieces)
+        self.hx_post(self.url("deplacer_diapo", c), {"sens": "haut"})
+        self.assertEqual(self.ordre(), [a, c, b])
+        self.hx_post(self.url("reordonner_diapos"), {"ordre": [b, a, c]})
+        self.assertEqual(self.ordre(), [b, a, c])
+        self.hx_post(self.url("supprimer_diapo", a))
+        self.assertEqual(self.ordre(), [b, c])
+        self.assertEqual(list(self.chant.diapos.values_list("ordre", flat=True)), [1, 2])
+
+    def test_infos_du_chant(self):
+        self.hx_post(self.url("infos_chant"), {"titre": "Sans attendre", "tags": "entrée, louange", "auteur": ""})
+        self.chant.refresh_from_db()
+        self.assertEqual((self.chant.titre, self.chant.tags), ("Sans attendre", "entrée, louange"))
+        self.assertIn("louange", self.chant.recherche)
+
+    def test_chant_hors_du_culte_introuvable(self):
+        autre = Chant.objects.create(titre="Autre")
+        piece = DiapoChant.objects.create(chant=autre, ordre=1)
+        url = reverse("cultes:enregistrer_diapo", args=[self.culte.pk, autre.pk, piece.pk])
+        self.assertEqual(self.client.post(url, {"contenu": "x"}).status_code, 404)
+
+    def test_lecteur_ne_peut_pas_modifier(self):
+        self.client.force_login(self.lecteur)
+        piece = self.pieces[0]
+        self.assertEqual(self.client.post(self.url("enregistrer_diapo", piece.pk), {"contenu": "x"}).status_code, 403)
+        self.assertEqual(self.hx_post(self.url("ajouter_diapo")).status_code, 403)
+        self.assertEqual(self.hx_post(reverse("cultes:creer_chant", args=[self.culte.pk]), {"titre": "X"}).status_code, 403)
+        reponse = self.client.get(self.culte.get_absolute_url())
+        self.assertNotContains(reponse, 'data-format="bold"')
+
+    def test_modification_visible_dans_les_autres_cultes(self):
+        autre = Culte.objects.create(date=date(2026, 9, 27))
+        ElementCulte.objects.create(culte=autre, ordre=1, type=ElementCulte.CHANT, chant=self.chant)
+        self.client.post(self.url("enregistrer_diapo", self.pieces[0].pk), {"contenu": "1. Corrigé"})
+        self.assertEqual(diapos.diapos_du_culte(autre)[2].lignes, ["1. Corrigé"])
+
+    def test_suppression_de_la_bibliotheque(self):
+        url_utilise = self.url("supprimer_chant")
+        reponse = self.hx_post(url_utilise)
         self.assertContains(reponse, "utilisé dans 1 culte")
         self.assertTrue(Chant.objects.filter(pk=self.chant.pk).exists())
+        libre = Chant.objects.create(titre="Libre")
+        reponse = self.hx_post(reverse("cultes:supprimer_chant", args=[self.culte.pk, libre.pk]))
+        self.assertContains(reponse, "a été supprimé")
+        self.assertFalse(Chant.objects.filter(pk=libre.pk).exists())
 
-    def test_page_du_chant_liste_les_cultes(self):
-        reponse = self.client.get(self.chant.get_absolute_url())
-        self.assertContains(reponse, "Utilisé dans 1 culte")
-        self.assertContains(reponse, "Culte du 20 septembre 2026")
-
-    def test_correction_des_paroles_revient_au_culte(self):
-        url = reverse("chants:modification", args=[self.chant.pk]) + f"?next={self.culte.get_absolute_url()}"
-        donnees = {"titre": self.chant.titre, "auteur": "", "langue": "Français", "tags": "", "paroles": "1. Corrigé"}
-        reponse = self.client.post(url, donnees)
-        self.assertRedirects(reponse, self.culte.get_absolute_url())
-        self.assertEqual(diapos.diapos_du_culte(self.culte)[2].lignes, ["1. Corrigé"])
-
-    def test_next_externe_ignore(self):
-        url = reverse("chants:modification", args=[self.chant.pk]) + "?next=https://exemple.com/"
-        donnees = {"titre": self.chant.titre, "auteur": "", "langue": "Français", "tags": "", "paroles": "1. X"}
-        reponse = self.client.post(url, donnees)
-        self.assertRedirects(reponse, self.chant.get_absolute_url())
+    def test_editeur_affiche_le_ruban_de_mise_en_forme(self):
+        reponse = self.client.get(self.culte.get_absolute_url())
+        for attendu in ('data-format="bold"', 'data-couleur-texte', 'data-diapo-action="ajouter"', 'id="dlg-nouveau-chant"'):
+            self.assertContains(reponse, attendu)
+        self.assertContains(reponse, f'data-piece="{self.pieces[0].pk}"')

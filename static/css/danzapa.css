@@ -371,7 +371,10 @@ a.carte-lien:hover { border-color: var(--accent); }
   line-height: 1.2;
 }
 /* --taille : calculée côté serveur (apps/projection/rendu.py), comme pour le .pptx */
-.diapo-contenu p { margin: 0; font-size: var(--taille, 5.6cqw); overflow-wrap: anywhere; }
+.diapo-contenu p, .diapo-contenu > div { margin: 0; font-size: var(--taille, 5.6cqw); overflow-wrap: anywhere; min-height: 1em; }
+.aligner-gauche { text-align: left; }
+.aligner-centre { text-align: center; }
+.aligner-droite { text-align: right; }
 .diapo-titre .diapo-contenu {
   font-family: var(--police-titres, Georgia, serif);
   text-transform: var(--casse-titre, uppercase);
@@ -729,3 +732,64 @@ input.titre-culte:hover, input.titre-culte:focus { border-color: var(--bordure);
 }
 .champ-case input { width: auto; order: -1; }
 .champ-case label { font-weight: 600; }
+
+
+/* ================================================================
+   Saisie des chants dans l'éditeur (mode édition)
+   ================================================================ */
+.diapo-editable { outline: 3px solid var(--accent); outline-offset: 3px; cursor: text; }
+.diapo-editable .diapo-contenu { outline: none; min-height: 30%; caret-color: currentColor; }
+.diapo-editable .diapo-contenu:empty::before { content: "Tapez les paroles de cette diapo…"; opacity: 0.5; }
+
+.bandeau-edition {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  max-width: 960px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 0.5rem 0.75rem;
+  background: #fbe9e4;
+  border: 1px solid #f0c4b8;
+  border-radius: var(--rayon);
+  font-size: 0.9rem;
+}
+.bandeau-edition[hidden] { display: none; }
+.bandeau-edition .bouton-principal { padding: 0.4rem 0.9rem; }
+
+.groupe-edition { box-shadow: 0 0 0 2px var(--accent); background: #fff7f5; }
+.groupe-edition .groupe-entete { color: var(--accent); font-weight: 600; }
+
+.outil-carre { min-width: 2.2rem; max-width: none; justify-content: center; font-size: 1rem; padding: 0.35rem 0.5rem; }
+.outil-couleur { position: relative; cursor: pointer; }
+.outil-couleur input[type=color] {
+  width: 1.6rem;
+  height: 0.5rem;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+}
+.outil-couleur.desactive { opacity: 0.4; pointer-events: none; }
+.couleur-a { font-weight: 700; line-height: 1; }
+body:not(.mode-edition) .groupe-police .outil { opacity: 0.45; }
+
+.dialogue details { margin-top: 0.75rem; }
+.dialogue summary { cursor: pointer; color: var(--texte-doux); font-size: 0.9rem; }
+.liste-resultats li { display: flex; align-items: stretch; border-bottom: 1px solid var(--bordure); }
+.liste-resultats li .resultat { border-bottom: none; flex: 1; }
+.supprimer-chant { padding: 0 0.75rem; opacity: 0.6; }
+.supprimer-chant:hover { opacity: 1; background: #fde7e9; }
+.outils-pile { display: flex; flex-direction: column; gap: 0.1rem; }
+.outil-ligne { flex-direction: row; justify-content: flex-start; min-width: 0; max-width: none; white-space: nowrap; padding: 0.2rem 0.45rem; }
+.ruban-groupe .outil { min-width: 3.6rem; }
+.ruban-groupe .outil-carre { min-width: 2.1rem; padding: 0.35rem 0.4rem; }
+.ruban-groupe .outil-ligne { min-width: 0; }
+/* Ruban contextuel : outils de saisie seulement en mode édition, outils de
+   l'élément du culte seulement hors édition. */
+body:not(.mode-edition) .groupe-edition-seule,
+body.mode-edition .groupe-hors-edition,
+body.mode-edition .cache-en-edition,
+body:not(.mode-edition) .cache-hors-edition { display: none; }

@@ -10,7 +10,7 @@ Danzapa enregistre chaque chant **une seule fois** dans une bibliothèque. Pour 
 
 ## Fonctionnalités prévues
 
-- **Bibliothèque de chants** : ajout, modification, recherche, découpage des paroles en couplets et refrains.
+- **Bibliothèque de chants** : chaque chant est saisi une fois, diapo par diapo, directement dans l'éditeur de culte, puis retrouvé par son titre, ses tags ou ses paroles dans tous les cultes.
 - **Préparation d'un culte** : diapo de bienvenue, puis ajout de chants de la bibliothèque, de texte libre ou d'annonces, rangés par moment (« Cantique d'entrée », « Adoration », « Offrande »…) et réordonnés par glisser-déposer.
 - **Génération automatique des diapositives** : pour chaque chant, une diapo titre (moment + titre du chant), puis les paroles découpées en diapos de 4 lignes (réglable), avec le numéro du couplet en tête.
 - **Export PowerPoint** (`.pptx`) avec `python-pptx`.
@@ -46,7 +46,7 @@ Onglets du ruban :
 | Modèle | Champs principaux |
 |--------|-------------------|
 | `Chant` | titre, auteur, langue, tags, date d'ajout |
-| `Couplet` | chant, ordre, type (couplet, refrain, pont), texte |
+| `DiapoChant` | chant, ordre, contenu mis en forme (HTML nettoyé), alignement, taille, couleur de fond |
 | `Culte` | date, titre, thème, statut (brouillon, prêt), diapo de bienvenue, créé par |
 | `ElementCulte` | culte, ordre, moment, type (chant, lecture, annonce, texte libre), chant, contenu libre |
 | `Theme` | nom, fond (couleur ou image), police, taille, couleur du texte, lignes par diapo |
@@ -117,38 +117,31 @@ Les trois rôles sont créés automatiquement par `migrate` sous forme de groupe
 
 Pour ajouter quelqu'un : `/admin/` → **Utilisateurs** → **Ajouter**, puis cocher son groupe. Pour qu'un administrateur accède à `/admin/`, cocher aussi « Statut équipe ».
 
-## Saisir les paroles d'un chant
+## Saisir un chant (dans l'éditeur du culte)
 
-Dans **Chants** → **Nouveau chant**, collez les paroles dans un seul champ. Danzapa les découpe automatiquement :
+Tout se passe sur la page du culte, comme dans PowerPoint :
 
-```
-1. Sans attendre
-Je veux tendre
-Au bonheur promis
+1. **Accueil → Nouveau chant** : indiquez le titre et des tags (« adoration, louange »…) pour retrouver le chant plus tard, et le moment du culte. Optionnel : collez des paroles existantes, découpées automatiquement en diapos.
+2. L'éditeur passe en **mode édition** : tapez les paroles directement sur la grande diapo. **Chaque frappe est enregistrée automatiquement** (« ✓ Enregistré » en haut à droite).
+3. Mettez en forme avec le ruban :
+   - **Police** : gras, italique, souligné, couleur du texte sélectionné, effacer la mise en forme ;
+   - **Paragraphe** : A+ / A− (taille de la diapo), alignement gauche / centre / droite, couleur de fond de la diapo ou fond du thème.
+4. **Nouvelle diapo** (ou Ctrl+Entrée) passe à la diapo suivante. **Dupliquer** copie la diapo, pratique pour un refrain qui revient. Les diapos se réordonnent par glisser-déposer ou avec Monter / Descendre.
+5. **Fermer le chant** (ou Échap) quand tout est bon, puis passez au chant suivant.
 
-Refrain
-De mon Dieu je suis l'enfant
-Et c'est lui qui me défend
+Le chant est rangé dans la bibliothèque. Dans n'importe quel culte, **Insérer un chant** le retrouve par son titre, ses tags ou ses paroles, sans tenir compte des accents. Pour le corriger, double-cliquez sur une de ses diapos, ou sélectionnez-la puis cliquez sur **Modifier le chant**. La correction s'applique à tous les cultes qui l'utilisent. Un chant qui ne sert dans aucun culte peut être supprimé depuis la fenêtre **Insérer un chant** (🗑).
 
-2. Qui s'élance
-Qui s'avance
-```
-
-- Une ligne vide sépare deux blocs.
-- `1.`, `2)` ou `3 -` en tête de bloc donne le numéro du couplet. Sans numéro, les couplets sont numérotés à la suite.
-- `Refrain`, `R:`, `Chorus`, `Pont` ou `Bridge` sur la première ligne marque le type du bloc.
-
-La page du chant affiche chaque bloc en aperçu de diapositive. La recherche ignore les accents et regarde le titre, l'auteur, les tags et les paroles : « s'elance » trouve « Qui s'élance ». Un chant qui existe déjà (même titre et même auteur) ne peut pas être recréé.
+Les diapos sont projetées telles qu'elles ont été tapées : le refrain n'est plus répété automatiquement. Les chants saisis avec l'ancienne version (couplets et refrains) ont été convertis en diapos, par paquets de 4 lignes.
 
 ## Préparer un culte
 
 Dans **Cultes**, choisissez la date et cliquez sur **Créer**. L'éditeur s'ouvre avec la disposition de PowerPoint :
 
-- **Accueil** ou **Insertion** → **Insérer un chant** : cherchez dans la bibliothèque, indiquez le moment (« Cantique d'entrée » est proposé pour le premier chant) et cliquez sur le chant. Un chant absent de la bibliothèque se saisit avec **Nouveau chant** : il est enregistré dans la bibliothèque et ajouté au culte.
+- **Accueil** ou **Insertion** → **Insérer un chant** : cherchez dans la bibliothèque, indiquez le moment (« Cantique d'entrée » est proposé pour le premier chant) et cliquez sur le chant. Un chant absent de la bibliothèque se crée avec **Nouveau chant** (voir ci-dessus).
 - **Nouvelle diapo** : texte libre (annonces, lecture…). Une ligne vide sépare deux diapos.
 - Les vignettes à gauche sont regroupées par chant. Faites glisser l'en-tête d'un chant pour le déplacer entier, ou utilisez **Monter** / **Descendre**.
-- Sous la diapo : moment, **Répéter le refrain après chaque couplet**, **Corriger les paroles** (la correction s'applique à la bibliothèque, donc à tous les cultes), **Masquer**, **Retirer du culte**.
-- **Création** : texte de la diapo de bienvenue et nombre de lignes par diapo (4 par défaut ; 6 lignes donnent 3 + 3).
+- Sous la diapo : moment, titre / tags / auteur du chant, **Modifier le chant**, **Masquer**, **Retirer du culte**.
+- **Création** : texte de la diapo de bienvenue, thème, et nombre de lignes par diapo utilisé quand on colle des paroles (4 par défaut ; 6 lignes donnent 3 + 3).
 - **Fichier** → **Dupliquer** : copie tout le culte sur une autre date, pratique d'un dimanche à l'autre.
 - **Affichage** ou barre d'état : vue normale ou trieuse de diapositives. Les flèches du clavier passent d'une diapo à l'autre.
 

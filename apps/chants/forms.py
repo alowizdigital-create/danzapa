@@ -1,47 +1,47 @@
 from django import forms
 
-from . import paroles
 from .models import Chant
 
-AIDE_PAROLES = (
-    "Séparez chaque couplet par une ligne vide. "
-    "Numérotez les couplets (« 1. », « 2. »…) et écrivez « Refrain » "
-    "ou « Pont » sur la première ligne du bloc concerné."
+AIDE_COLLER = (
+    "Optionnel : collez des paroles existantes pour créer les diapos d'un coup "
+    "(une ligne vide sépare deux blocs). Sinon, tapez-les diapo par diapo."
 )
 
 
-class ChantForm(forms.ModelForm):
-    paroles = forms.CharField(
-        widget=forms.Textarea(attrs={"rows": 18, "spellcheck": "true"}),
-        help_text=AIDE_PAROLES,
-    )
+class ChantInfosForm(forms.ModelForm):
+    """Titre, tags et auteur : ce qui permet de retrouver le chant."""
 
     class Meta:
         model = Chant
-        fields = ["titre", "auteur", "langue", "tags"]
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        if self.instance.pk and not self.is_bound:
-            self.initial["paroles"] = self.instance.paroles_texte
-
-    def clean_paroles(self):
-        texte = self.cleaned_data["paroles"]
-        if not paroles.decouper(texte):
-            raise forms.ValidationError("Les paroles ne contiennent aucun couplet.")
-        return texte
+        fields = ["titre", "tags", "auteur"]
+        widgets = {
+            "tags": forms.TextInput(attrs={"placeholder": "adoration, louange, entrée…"}),
+        }
 
     def clean(self):
         donnees = super().clean()
-        titre = donnees.get("titre", "").strip()
-        auteur = donnees.get("auteur", "").strip()
+        titre = (donnees.get("titre") or "").strip()
+        auteur = (donnees.get("auteur") or "").strip()
         if titre:
             doublons = Chant.objects.filter(titre__iexact=titre, auteur__iexact=auteur)
             if self.instance.pk:
                 doublons = doublons.exclude(pk=self.instance.pk)
             if doublons.exists():
                 raise forms.ValidationError(
-                    "Ce chant existe déjà dans la bibliothèque. "
-                    "Modifiez-le plutôt que de le recréer."
+                    "Ce chant existe déjà dans la bibliothèque : insérez-le avec « Insérer un chant »."
                 )
         return donnees
+
+
+class NouveauChantForm(ChantInfosForm):
+    moment = forms.CharField(max_length=100, required=False)
+    paroles = forms.CharField(widget=forms.Textarea, required=False, help_text=AIDE_COLLER)
+
+
+class DiapoChantForm(forms.Form):
+    """Contenu et réglages d'une diapo, envoyés par l'éditeur à chaque modification."""
+
+    contenu = forms.CharField(required=False, max_length=20000, strip=False)
+    alignement = forms.ChoiceField(choices=[("gauche", ""), ("centre", ""), ("droite", "")], required=False)
+    echelle = forms.IntegerField(required=False, min_value=50, max_value=200)
+    couleur_fond = forms.RegexField(regex=r"^(#[0-9a-fA-F]{6})?$", required=False)

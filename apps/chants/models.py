@@ -1,12 +1,14 @@
 from django.conf import settings
+from django.core.validators import MaxValueValidator, MinValueValidator, RegexValidator
 from django.db import models, transaction
-from django.urls import reverse
 
-from . import paroles
+from . import mise_en_forme, paroles
 from .recherche import normaliser
 
 
 class Chant(models.Model):
+    """Un chant de la bibliothèque : saisi une fois, réutilisé dans tous les cultes."""
+
     titre = models.CharField(max_length=200)
     auteur = models.CharField(max_length=200, blank=True)
     langue = models.CharField(max_length=50, default="Français")
@@ -38,63 +40,70 @@ class Chant(models.Model):
     def __str__(self):
         return self.titre
 
-    def get_absolute_url(self):
-        return reverse("chants:detail", args=[self.pk])
-
     @property
     def liste_tags(self):
         return [t.strip() for t in self.tags.split(",") if t.strip()]
 
     @property
-    def paroles_texte(self):
-        return paroles.vers_texte(self.couplets.all())
+    def premiere_ligne(self):
+        diapo = self.diapos.first()
+        return diapo.texte.split("\n", 1)[0] if diapo else ""
 
     @transaction.atomic
-    def remplacer_paroles(self, texte):
-        """Remplace les couplets par ceux découpés dans `texte`."""
-        self.couplets.all().delete()
-        Couplet.objects.bulk_create(
-            Couplet(chant=self, ordre=i, type=b.type, numero=b.numero, texte=b.texte)
-            for i, b in enumerate(paroles.decouper(texte), start=1)
+    def remplacer_paroles(self, texte, lignes_par_diapo=4):
+        """Remplace les diapos par celles découpées dans des paroles collées."""
+        self.diapos.all().delete()
+        DiapoChant.objects.bulk_create(
+            DiapoChant(chant=self, ordre=i, **DiapoChant.champs_depuis_html(mise_en_forme.depuis_texte(t)))
+            for i, t in enumerate(paroles.en_diapos(texte, lignes_par_diapo), start=1)
         )
         self.mettre_a_jour_recherche()
 
     def mettre_a_jour_recherche(self):
         morceaux = [self.titre, self.auteur, self.tags]
-        morceaux += self.couplets.values_list("texte", flat=True)
+        morceaux += self.diapos.values_list("texte", flat=True)
         self.recherche = normaliser(" ".join(morceaux))
         Chant.objects.filter(pk=self.pk).update(recherche=self.recherche)
 
 
-class Couplet(models.Model):
-    TYPES = [
-        (paroles.COUPLET, "Couplet"),
-        (paroles.REFRAIN, "Refrain"),
-        (paroles.PONT, "Pont"),
-    ]
+couleur_hex = RegexValidator(r"^#[0-9a-fA-F]{6}$", "Couleur au format #RRGGBB.")
 
-    chant = models.ForeignKey(Chant, on_delete=models.CASCADE, related_name="couplets")
-    ordre = models.PositiveSmallIntegerField()
-    type = models.CharField(max_length=10, choices=TYPES, default=paroles.COUPLET)
-    numero = models.PositiveSmallIntegerField(
-        "numéro", null=True, blank=True, help_text="Numéro affiché devant le couplet"
+
+class DiapoChant(models.Model):
+    """Une diapo d'un chant, telle qu'elle a été tapée et mise en forme."""
+
+    GAUCHE, CENTRE, DROITE = "gauche", "centre", "droite"
+    ALIGNEMENTS = [(GAUCHE, "Gauche"), (CENTRE, "Centré"), (DROITE, "Droite")]
+    ECHELLE_MIN, ECHELLE_MAX = 50, 200
+
+    chant = models.ForeignKey(Chant, on_delete=models.CASCADE, related_name="diapos")
+    ordre = models.PositiveIntegerField()
+    # HTML canonique produit par mise_en_forme.nettoyer (jamais le HTML brut du navigateur).
+    contenu = models.TextField(blank=True)
+    texte = models.TextField(blank=True, editable=False)
+    alignement = models.CharField(max_length=10, choices=ALIGNEMENTS, default=CENTRE)
+    echelle = models.PositiveSmallIntegerField(
+        "taille (%)", default=100, validators=[MinValueValidator(ECHELLE_MIN), MaxValueValidator(ECHELLE_MAX)]
     )
-    texte = models.TextField()
+    couleur_fond = models.CharField(
+        "couleur de fond", max_length=7, blank=True, validators=[couleur_hex], help_text="Vide : couleur du thème."
+    )
 
     class Meta:
-        ordering = ["chant_id", "ordre"]
-        verbose_name = "couplet"
-        verbose_name_plural = "couplets"
+        ordering = ["chant_id", "ordre", "pk"]
+        verbose_name = "diapo de chant"
+        verbose_name_plural = "diapos de chant"
 
     def __str__(self):
-        return f"{self.chant} – {self.libelle}"
+        return f"{self.chant} – diapo {self.ordre}"
 
-    @property
-    def libelle(self):
-        if self.type == paroles.COUPLET and self.numero:
-            return f"Couplet {self.numero}"
-        return self.get_type_display()
+    @staticmethod
+    def champs_depuis_html(html):
+        contenu = mise_en_forme.nettoyer(html)
+        return {"contenu": contenu, "texte": mise_en_forme.texte_brut(contenu)}
 
-    @property
-    def lignes(self):
-        return self.texte.splitlines()
+    def save(self, *args, **kwargs):
+        champs = self.champs_depuis_html(self.contenu)
+        self.contenu, self.texte = champs["contenu"], champs["texte"]
+        self.echelle = min(self.ECHELLE_MAX, max(self.ECHELLE_MIN, self.echelle or 100))
+        super().save(*args, **kwargs)

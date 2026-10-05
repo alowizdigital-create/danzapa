@@ -144,7 +144,35 @@ class ExportTests(TestCase):
 
     def test_notes_du_presentateur(self):
         diapositive = list(ouvrir(export.exporter(self.culte)).slides)[2]
-        self.assertEqual(diapositive.notes_slide.notes_text_frame.text, "Sans attendre je veux tendre — Couplet 1")
+        self.assertEqual(diapositive.notes_slide.notes_text_frame.text, "Sans attendre je veux tendre — Diapo 1")
+
+    def test_mise_en_forme_des_diapos_exportee(self):
+        from apps.chants.models import DiapoChant
+
+        piece = self.chant.diapos.first()
+        piece.contenu = '1. Sans <b>attendre</b><div><i><u>Je veux</u></i> <span style="color: #ffd700">tendre</span></div>'
+        piece.alignement, piece.couleur_fond = "droite", "#203040"
+        piece.save()
+        diapositive = list(ouvrir(export.exporter(self.culte)).slides)[2]
+        self.assertEqual(str(diapositive.background.fill.fore_color.rgb), "203040")
+        paragraphes = [f for f in diapositive.shapes if f.has_text_frame][0].text_frame.paragraphs
+        self.assertEqual([p.text for p in paragraphes], ["1. Sans attendre", "Je veux tendre"])
+        runs = paragraphes[0].runs
+        self.assertEqual([(r.text, r.font.bold) for r in runs], [("1. Sans ", True), ("attendre", True)])
+        je_veux, espace, tendre = paragraphes[1].runs
+        self.assertTrue(je_veux.font.italic and je_veux.font.underline)
+        self.assertEqual(str(tendre.font.color.rgb), "FFD700")
+        from pptx.enum.text import PP_ALIGN
+        self.assertEqual(paragraphes[0].alignment, PP_ALIGN.RIGHT)
+        self.assertTrue(DiapoChant.objects.filter(pk=piece.pk).exists())
+
+    def test_pas_gras_explicite_exporte(self):
+        piece = self.chant.diapos.first()
+        piece.contenu = '1. Sans <span style="font-weight: normal">attendre</span>'
+        piece.save()
+        diapositive = list(ouvrir(export.exporter(self.culte)).slides)[2]
+        runs = [f for f in diapositive.shapes if f.has_text_frame][0].text_frame.paragraphs[0].runs
+        self.assertEqual([(r.text, r.font.bold) for r in runs], [("1. Sans ", True), ("attendre", False)])
 
     def test_images_de_fond_et_de_bienvenue(self):
         theme = Theme.objects.create(nom="Photo", image_fond=image_png(), image_bienvenue=image_png((0, 0, 200)))

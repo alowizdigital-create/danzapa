@@ -77,8 +77,8 @@ class Culte(models.Model):
         return self.theme or Theme.par_defaut()
 
     def elements_complets(self):
-        """Éléments avec leurs chants et couplets, en deux requêtes."""
-        return self.elements.select_related("chant").prefetch_related("chant__couplets")
+        """Éléments avec leurs chants et leurs diapos, en deux requêtes."""
+        return self.elements.select_related("chant").prefetch_related("chant__diapos")
 
     def prochain_ordre(self):
         dernier = self.elements.aggregate(m=models.Max("ordre"))["m"]
@@ -111,7 +111,6 @@ class Culte(models.Model):
                 type=e.type,
                 moment=e.moment,
                 chant_id=e.chant_id,
-                repeter_refrain=e.repeter_refrain,
                 masque=e.masque,
                 titre=e.titre,
                 contenu=e.contenu,
@@ -135,7 +134,6 @@ class ElementCulte(models.Model):
     chant = models.ForeignKey(
         Chant, on_delete=models.PROTECT, null=True, blank=True, related_name="utilisations"
     )
-    repeter_refrain = models.BooleanField("répéter le refrain", default=True)
     masque = models.BooleanField("masqué", default=False)
     titre = models.CharField(max_length=200, blank=True)
     contenu = models.TextField(blank=True)

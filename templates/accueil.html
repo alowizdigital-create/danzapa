@@ -8,11 +8,10 @@
 
 <div class="cartes">
   {% if perms.chants.view_chant %}
-  <a class="carte carte-lien" href="{% url 'chants:liste' %}">
+  <div class="carte">
     <h2>Bibliothèque de chants</h2>
-    <p>Enregistrez chaque chant une fois pour le réutiliser à chaque culte.</p>
-    <span class="badge badge-actif">Ouvrir</span>
-  </a>
+    <p>{{ nb_chants }} chant{{ nb_chants|pluralize }} enregistré{{ nb_chants|pluralize }}. Les chants se créent et se modifient dans l'éditeur d'un culte (<strong>Nouveau chant</strong>), puis se retrouvent par leur titre ou leurs tags dans tous les cultes.</p>
+  </div>
   {% endif %}
   {% if perms.cultes.view_culte %}
   <a class="carte carte-lien" href="{% if prochain_culte %}{{ prochain_culte.get_absolute_url }}{% else %}{% url 'cultes:liste' %}{% endif %}">

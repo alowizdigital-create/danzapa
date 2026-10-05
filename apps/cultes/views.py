@@ -4,7 +4,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.db import transaction
-from django.http import HttpResponse, HttpResponseBadRequest
+from django.http import HttpResponse, HttpResponseBadRequest, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse_lazy
 from django.utils import timezone
@@ -12,8 +12,8 @@ from django.utils.http import content_disposition_header
 from django.views.decorators.http import require_POST
 from django.views.generic import CreateView, DeleteView, TemplateView
 
-from apps.chants.forms import ChantForm
-from apps.chants.models import Chant
+from apps.chants.forms import ChantInfosForm, DiapoChantForm, NouveauChantForm
+from apps.chants.models import Chant, DiapoChant
 from apps.chants.recherche import filtrer, titres_d_abord
 
 from apps.projection import pptx, rendu
@@ -45,10 +45,18 @@ def moments_connus():
     return sorted(moments)
 
 
-def contexte_espace(request, culte, selection=None):
+def contexte_espace(request, culte, selection=None, edition=None, piece=None):
+    """Contexte du fragment #espace.
+
+    `selection` : élément du culte à afficher ; `edition` : chant ouvert en
+    mode édition ; `piece` : diapo de ce chant à sélectionner.
+    """
     theme = culte.theme_effectif
     groupes = rendu.annoter(diapos.groupes_du_culte(culte), theme)
     return {
+        "edition": edition,
+        "piece": piece,
+        "peut_editer_chants": request.user.has_perm("chants.change_chant"),
         "culte": culte,
         "theme": theme,
         "themes": Theme.objects.all(),
@@ -62,11 +70,11 @@ def contexte_espace(request, culte, selection=None):
     }
 
 
-def reponse_espace(request, culte, selection=None):
+def reponse_espace(request, culte, selection=None, edition=None, piece=None):
     """Après une modification : le fragment pour HTMX, sinon retour à l'éditeur."""
     culte.save(update_fields=["date_modification"])
     if request.headers.get("HX-Request"):
-        return render(request, "cultes/_espace.html", contexte_espace(request, culte, selection))
+        return render(request, "cultes/_espace.html", contexte_espace(request, culte, selection, edition, piece))
     return redirect(culte)
 
 
@@ -165,13 +173,13 @@ def chercher_chants(request, pk):
     # Classement sur tous les résultats (titres seuls, requête légère), puis
     # chargement complet des 30 premiers.
     ids = [c.pk for c in titres_d_abord(filtrer(Chant.objects.only("pk", "titre"), q), q)[:30]]
-    par_id = Chant.objects.prefetch_related("couplets").in_bulk(ids)
+    par_id = Chant.objects.prefetch_related("diapos", "utilisations").in_bulk(ids)
     chants = [par_id[i] for i in ids]
     deja = set(culte.elements.exclude(chant=None).values_list("chant_id", flat=True))
     return render(
         request,
         "cultes/_resultats_chants.html",
-        {"culte": culte, "chants": chants, "q": q, "deja": deja},
+        {"culte": culte, "chants": chants, "q": q, "deja": deja, "message": getattr(request, "message_resultats", "")},
     )
 
 
@@ -208,33 +216,200 @@ def ajouter_texte(request, pk):
     return reponse_espace(request, culte, element.pk)
 
 
-@login_required
-@permission_required(["cultes.change_culte", "chants.add_chant"], raise_exception=True)
-def nouveau_chant(request, pk):
-    """Saisir un chant qui n'est pas encore dans la bibliothèque et l'ajouter au culte."""
-    culte = get_object_or_404(Culte, pk=pk)
-    moment = request.POST.get("moment", request.GET.get("moment", "")).strip()
-    form = ChantForm(request.POST or None)
-    if request.method == "POST" and form.is_valid():
-        with transaction.atomic():
-            form.instance.cree_par = request.user
-            chant = form.save()
-            chant.remplacer_paroles(form.cleaned_data["paroles"])
-            ElementCulte.objects.create(
-                culte=culte,
-                ordre=culte.prochain_ordre(),
-                type=ElementCulte.CHANT,
-                chant=chant,
-                moment=moment,
-            )
-        culte.save(update_fields=["date_modification"])
-        messages.success(request, f"« {chant} » a été ajouté à la bibliothèque et au culte.")
-        return redirect(culte)
-    return render(
-        request,
-        "cultes/nouveau_chant.html",
-        {"culte": culte, "form": form, "moment": moment, "moments": moments_connus()},
+# ---------------------------------------------------------------- Chants (saisie en place)
+
+
+def peut_creer_chant(vue):
+    return login_required(
+        permission_required(["cultes.change_culte", "chants.add_chant"], raise_exception=True)(vue)
     )
+
+
+def peut_editer_chant(vue):
+    return login_required(permission_required("chants.change_chant", raise_exception=True)(vue))
+
+
+def chant_du_culte(pk, chant_pk):
+    """Le chant, à condition qu'il fasse partie de ce culte."""
+    culte = get_object_or_404(Culte, pk=pk)
+    element = get_object_or_404(culte.elements.select_related("chant"), chant_id=chant_pk)
+    return culte, element, element.chant
+
+
+def premiere_erreur(form):
+    return next((e for erreurs in form.errors.values() for e in erreurs), "Données invalides.")
+
+
+@peut_creer_chant
+@require_POST
+def creer_chant(request, pk):
+    """« Nouveau chant » : crée le chant dans la bibliothèque, l'ajoute au culte,
+    et ouvre l'éditeur sur sa première diapo."""
+    culte = get_object_or_404(Culte, pk=pk)
+    form = NouveauChantForm(request.POST)
+    if not form.is_valid():
+        return HttpResponseBadRequest(premiere_erreur(form))
+    with transaction.atomic():
+        form.instance.cree_par = request.user
+        chant = form.save()
+        if form.cleaned_data["paroles"].strip():
+            chant.remplacer_paroles(form.cleaned_data["paroles"], culte.lignes_par_diapo)
+        if not chant.diapos.exists():
+            DiapoChant.objects.create(chant=chant, ordre=1)
+        chant.mettre_a_jour_recherche()
+        element = ElementCulte.objects.create(
+            culte=culte,
+            ordre=culte.prochain_ordre(),
+            type=ElementCulte.CHANT,
+            chant=chant,
+            moment=form.cleaned_data["moment"].strip(),
+        )
+    return reponse_espace(request, culte, element.pk, chant.pk, chant.diapos.first().pk)
+
+
+@peut_editer_chant
+@require_POST
+def infos_chant(request, pk, chant_pk):
+    culte, element, chant = chant_du_culte(pk, chant_pk)
+    form = ChantInfosForm(request.POST, instance=chant)
+    if not form.is_valid():
+        return HttpResponseBadRequest(premiere_erreur(form))
+    form.save()
+    chant.mettre_a_jour_recherche()
+    return reponse_espace(request, culte, element.pk, chant.pk)
+
+
+@peut_editer_chant
+@require_POST
+def enregistrer_diapo(request, pk, chant_pk, piece_pk):
+    """Sauvegarde automatique d'une diapo pendant la saisie (réponse JSON légère,
+    pour ne pas recharger l'éditeur sous les doigts de la personne)."""
+    culte, element, chant = chant_du_culte(pk, chant_pk)
+    piece = get_object_or_404(chant.diapos, pk=piece_pk)
+    form = DiapoChantForm(request.POST)
+    if not form.is_valid():
+        return HttpResponseBadRequest(premiere_erreur(form))
+    donnees = form.cleaned_data
+    if "contenu" in request.POST:
+        piece.contenu = donnees["contenu"]
+    if donnees.get("alignement"):
+        piece.alignement = donnees["alignement"]
+    if donnees.get("echelle"):
+        piece.echelle = donnees["echelle"]
+    if "couleur_fond" in request.POST:
+        piece.couleur_fond = donnees["couleur_fond"]
+    piece.save()
+    chant.mettre_a_jour_recherche()
+    culte.save(update_fields=["date_modification"])
+
+    apercu = diapos.Diapo(
+        diapos.PAROLES, piece.texte.split("\n") if piece.texte else [""], echelle=piece.echelle
+    )
+    return JsonResponse(
+        {
+            "contenu": piece.contenu,
+            "taille": rendu.en_cqw(rendu.taille_pt(apercu, culte.theme_effectif)),
+            "alignement": piece.alignement,
+            "echelle": piece.echelle,
+            "couleur_fond": piece.couleur_fond,
+        }
+    )
+
+
+def renumeroter_diapos(chant, pieces):
+    for rang, piece in enumerate(pieces, start=1):
+        piece.ordre = rang
+    DiapoChant.objects.bulk_update(pieces, ["ordre"])
+
+
+@peut_editer_chant
+@require_POST
+def ajouter_diapo(request, pk, chant_pk):
+    """Nouvelle diapo (vide, ou copie de `dupliquer`) placée après `apres`."""
+    culte, element, chant = chant_du_culte(pk, chant_pk)
+    pieces = list(chant.diapos.all())
+    modele = next((p for p in pieces if str(p.pk) == request.POST.get("dupliquer")), None)
+    apres = next((p for p in pieces if str(p.pk) == request.POST.get("apres")), modele)
+    nouvelle = DiapoChant(chant=chant, ordre=0)
+    if modele:
+        nouvelle.contenu = modele.contenu
+        nouvelle.alignement, nouvelle.echelle, nouvelle.couleur_fond = (
+            modele.alignement, modele.echelle, modele.couleur_fond,
+        )
+    elif apres:
+        # Une nouvelle diapo garde la mise en page de la précédente.
+        nouvelle.alignement, nouvelle.echelle, nouvelle.couleur_fond = (
+            apres.alignement, apres.echelle, apres.couleur_fond,
+        )
+    nouvelle.save()
+    position = pieces.index(apres) + 1 if apres else len(pieces)
+    pieces.insert(position, nouvelle)
+    renumeroter_diapos(chant, pieces)
+    chant.mettre_a_jour_recherche()
+    return reponse_espace(request, culte, element.pk, chant.pk, nouvelle.pk)
+
+
+@peut_editer_chant
+@require_POST
+def supprimer_diapo(request, pk, chant_pk, piece_pk):
+    culte, element, chant = chant_du_culte(pk, chant_pk)
+    pieces = list(chant.diapos.all())
+    supprimee = get_object_or_404(chant.diapos, pk=piece_pk).pk
+    rang = [p.pk for p in pieces].index(supprimee)
+    DiapoChant.objects.filter(pk=supprimee).delete()
+    pieces = [p for p in pieces if p.pk != supprimee]
+    renumeroter_diapos(chant, pieces)
+    chant.mettre_a_jour_recherche()
+    voisine = pieces[min(rang, len(pieces) - 1)].pk if pieces else None
+    return reponse_espace(request, culte, element.pk, chant.pk, voisine)
+
+
+@peut_editer_chant
+@require_POST
+def deplacer_diapo(request, pk, chant_pk, piece_pk):
+    culte, element, chant = chant_du_culte(pk, chant_pk)
+    pieces = list(chant.diapos.all())
+    ids = [p.pk for p in pieces]
+    i = ids.index(get_object_or_404(chant.diapos, pk=piece_pk).pk)
+    j = i - 1 if request.POST.get("sens") == "haut" else i + 1
+    if 0 <= j < len(pieces):
+        pieces[i], pieces[j] = pieces[j], pieces[i]
+        renumeroter_diapos(chant, pieces)
+    return reponse_espace(request, culte, element.pk, chant.pk, piece_pk)
+
+
+@peut_editer_chant
+@require_POST
+def reordonner_diapos(request, pk, chant_pk):
+    culte, element, chant = chant_du_culte(pk, chant_pk)
+    par_id = {p.pk: p for p in chant.diapos.all()}
+    try:
+        ordre = [int(i) for i in request.POST.getlist("ordre")]
+    except ValueError:
+        return HttpResponseBadRequest("Ordre invalide.")
+    pieces = [par_id.pop(i) for i in ordre if i in par_id] + sorted(par_id.values(), key=lambda p: p.ordre)
+    renumeroter_diapos(chant, pieces)
+    selection = request.POST.get("piece")
+    return reponse_espace(request, culte, element.pk, chant.pk, int(selection) if selection and selection.isdigit() else None)
+
+
+@login_required
+@permission_required("chants.delete_chant", raise_exception=True)
+@require_POST
+def supprimer_chant_bibliotheque(request, pk, chant_pk):
+    """Depuis la fenêtre de recherche : retirer un chant de la bibliothèque,
+    seulement s'il n'est utilisé dans aucun culte."""
+    chant = get_object_or_404(Chant, pk=chant_pk)
+    nb = chant.utilisations.values("culte").distinct().count()
+    if nb:
+        request.message_resultats = (
+            f"« {chant} » est utilisé dans {nb} culte{'s' if nb > 1 else ''} : "
+            "retirez-le de ces cultes avant de le supprimer."
+        )
+    else:
+        request.message_resultats = f"« {chant} » a été supprimé de la bibliothèque."
+        chant.delete()
+    return chercher_chants(request, pk)
 
 
 # ---------------------------------------------------------------- Éléments

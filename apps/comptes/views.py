@@ -4,6 +4,7 @@ from django.http import HttpResponse
 from django.shortcuts import render
 from django.utils import timezone
 
+from apps.chants.models import Chant
 from apps.cultes.models import Culte
 
 
@@ -12,7 +13,7 @@ def accueil(request):
     prochain = None
     if request.user.has_perm("cultes.view_culte"):
         prochain = Culte.objects.filter(date__gte=timezone.localdate()).order_by("date", "pk").first()
-    return render(request, "accueil.html", {"prochain_culte": prochain})
+    return render(request, "accueil.html", {"prochain_culte": prochain, "nb_chants": Chant.objects.count()})
 
 
 def sante(request):

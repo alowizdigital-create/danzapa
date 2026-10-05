@@ -1,21 +1,21 @@
 from django.contrib import admin
 
-from .models import Chant, Couplet
+from .models import Chant, DiapoChant
 
 
-class CoupletInline(admin.TabularInline):
-    model = Couplet
+class DiapoInline(admin.TabularInline):
+    model = DiapoChant
     extra = 0
-    fields = ("ordre", "type", "numero", "texte")
+    fields = ("ordre", "texte", "alignement", "echelle", "couleur_fond")
+    readonly_fields = ("texte",)
 
 
 @admin.register(Chant)
 class ChantAdmin(admin.ModelAdmin):
-    list_display = ("titre", "auteur", "langue", "tags", "date_modification")
-    list_filter = ("langue",)
+    list_display = ("titre", "auteur", "tags", "date_modification")
     search_fields = ("titre", "auteur", "tags", "recherche")
     readonly_fields = ("cree_par", "date_ajout", "date_modification")
-    inlines = [CoupletInline]
+    inlines = [DiapoInline]
 
     def save_model(self, request, obj, form, change):
         if not change:

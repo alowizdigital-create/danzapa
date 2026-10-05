@@ -65,26 +65,70 @@
 
   {% if peut_modifier %}
   <div class="ruban-panneau" data-panneau="accueil">
-    <div class="ruban-groupe">
+    <div class="ruban-groupe groupe-hors-edition">
+      {% if perms.chants.add_chant %}<button type="button" class="outil" data-dialogue="dlg-nouveau-chant"><span class="outil-icone">✚</span>Nouveau chant</button>{% endif %}
       <button type="button" class="outil" data-dialogue="dlg-chant"><span class="outil-icone">♪</span>Insérer un chant</button>
-      <button type="button" class="outil" data-dialogue="dlg-texte"><span class="outil-icone">▤</span>Nouvelle diapo</button>
-      <span class="ruban-libelle">Diapositives</span>
+      <button type="button" class="outil" data-dialogue="dlg-texte"><span class="outil-icone">▤</span>Texte libre</button>
+      <span class="ruban-libelle">Ajouter</span>
     </div>
+    {% if perms.chants.change_chant %}
     <div class="ruban-groupe">
-      <button type="button" class="outil" data-cible="masquer"><span class="outil-icone">◌</span>Masquer / afficher</button>
-      <button type="button" class="outil" data-cible="monter"><span class="outil-icone">↑</span>Monter</button>
-      <button type="button" class="outil" data-cible="descendre"><span class="outil-icone">↓</span>Descendre</button>
-      <button type="button" class="outil" data-cible="supprimer"><span class="outil-icone">✕</span>Retirer</button>
-      <span class="ruban-libelle">Élément sélectionné</span>
+      <button type="button" class="outil cache-en-edition" data-chant-action="editer" data-hors-edition><span class="outil-icone">✎</span>Modifier le chant</button>
+      <button type="button" class="outil cache-hors-edition" data-chant-action="fermer" data-en-edition><span class="outil-icone">✓</span>Fermer le chant</button>
+      <span class="ruban-libelle">Chant</span>
+    </div>
+    <div class="ruban-groupe groupe-police groupe-edition-seule">
+      <button type="button" class="outil outil-carre" data-format="bold" data-en-edition title="Gras (Ctrl+B)"><b>G</b></button>
+      <button type="button" class="outil outil-carre" data-format="italic" data-en-edition title="Italique (Ctrl+I)"><i>I</i></button>
+      <button type="button" class="outil outil-carre" data-format="underline" data-en-edition title="Souligné (Ctrl+U)"><u>S</u></button>
+      <label class="outil outil-carre outil-couleur" title="Couleur du texte sélectionné">
+        <span class="couleur-a">A</span><input type="color" data-couleur-texte value="#ffd700" data-en-edition>
+      </label>
+      <button type="button" class="outil outil-carre" data-format="removeFormat" data-en-edition title="Effacer la mise en forme">⌫</button>
+      <span class="ruban-libelle">Police</span>
+    </div>
+    <div class="ruban-groupe groupe-edition-seule">
+      <button type="button" class="outil outil-carre" data-diapo-reglage="plus" data-en-edition title="Agrandir le texte de la diapo">A+</button>
+      <button type="button" class="outil outil-carre" data-diapo-reglage="moins" data-en-edition title="Réduire le texte de la diapo">A−</button>
+      <button type="button" class="outil outil-carre" data-diapo-reglage="gauche" data-en-edition title="Aligner à gauche">⇤</button>
+      <button type="button" class="outil outil-carre" data-diapo-reglage="centre" data-en-edition title="Centrer">≡</button>
+      <button type="button" class="outil outil-carre" data-diapo-reglage="droite" data-en-edition title="Aligner à droite">⇥</button>
+      <label class="outil outil-carre outil-couleur" title="Couleur de fond de la diapo">
+        <span>▣</span><input type="color" data-couleur-fond value="#000000" data-en-edition>
+      </label>
+      <button type="button" class="outil outil-carre" data-diapo-reglage="fond-theme" data-en-edition title="Fond du thème">∅</button>
+      <span class="ruban-libelle">Paragraphe</span>
+    </div>
+    <div class="ruban-groupe groupe-edition-seule">
+      <button type="button" class="outil" data-diapo-action="ajouter" data-en-edition title="Nouvelle diapo (Ctrl+Entrée)"><span class="outil-icone">＋</span>Nouvelle diapo</button>
+      <div class="outils-pile">
+        <button type="button" class="outil outil-ligne" data-diapo-action="dupliquer" data-en-edition title="Dupliquer la diapo">⧉ Dupliquer</button>
+        <button type="button" class="outil outil-ligne" data-diapo-action="supprimer" data-en-edition title="Supprimer la diapo">✕ Supprimer</button>
+      </div>
+      <div class="outils-pile">
+        <button type="button" class="outil outil-ligne" data-diapo-action="haut" data-en-edition title="Monter la diapo">↑ Monter</button>
+        <button type="button" class="outil outil-ligne" data-diapo-action="bas" data-en-edition title="Descendre la diapo">↓ Descendre</button>
+      </div>
+      <span class="ruban-libelle">Diapos du chant</span>
+    </div>
+    {% endif %}
+    <div class="ruban-groupe groupe-hors-edition">
+      <div class="outils-pile">
+        <button type="button" class="outil outil-ligne" data-cible="masquer" data-hors-edition>◌ Masquer / afficher</button>
+        <button type="button" class="outil outil-ligne" data-cible="supprimer" data-hors-edition>✕ Retirer du culte</button>
+      </div>
+      <div class="outils-pile">
+        <button type="button" class="outil outil-ligne" data-cible="monter" data-hors-edition>↑ Monter</button>
+        <button type="button" class="outil outil-ligne" data-cible="descendre" data-hors-edition>↓ Descendre</button>
+      </div>
+      <span class="ruban-libelle">Élément du culte</span>
     </div>
   </div>
 
   <div class="ruban-panneau" data-panneau="insertion" hidden>
     <div class="ruban-groupe">
+      {% if perms.chants.add_chant %}<button type="button" class="outil" data-dialogue="dlg-nouveau-chant"><span class="outil-icone">✚</span>Nouveau chant</button>{% endif %}
       <button type="button" class="outil" data-dialogue="dlg-chant"><span class="outil-icone">♪</span>Chant de la bibliothèque</button>
-      {% if perms.chants.add_chant %}
-        <a class="outil" href="{% url 'cultes:nouveau_chant' culte.pk %}"><span class="outil-icone">✎</span>Nouveau chant</a>
-      {% endif %}
       <span class="ruban-libelle">Chants</span>
     </div>
     <div class="ruban-groupe">
@@ -154,9 +198,34 @@
   </label>
   <div id="resultats-chants" class="resultats-chants" hx-get="{% url 'cultes:chercher_chants' culte.pk %}" hx-trigger="load"></div>
   {% if perms.chants.add_chant %}
-    <p class="aide">Le chant n'est pas dans la bibliothèque ? <a href="{% url 'cultes:nouveau_chant' culte.pk %}" data-avec-moment>Saisir un nouveau chant</a></p>
+    <p class="aide">Le chant n'est pas dans la bibliothèque ? <button type="button" class="bouton-lien" data-dialogue="dlg-nouveau-chant">Créer un nouveau chant</button></p>
   {% endif %}
 </dialog>
+
+{% if perms.chants.add_chant %}
+<dialog id="dlg-nouveau-chant" class="dialogue" aria-labelledby="dlg-nouveau-chant-titre">
+  <form hx-post="{% url 'cultes:creer_chant' culte.pk %}" hx-target="#espace" hx-swap="outerHTML" data-ferme-apres>
+    <div class="dialogue-entete">
+      <h2 id="dlg-nouveau-chant-titre">Nouveau chant</h2>
+      <button type="button" class="bouton-lien" data-fermer>✕</button>
+    </div>
+    <p class="aide">Le chant est enregistré dans la bibliothèque : vous le retrouverez dans tous les cultes par son titre ou ses tags.</p>
+    <label>Titre du chant <input name="titre" maxlength="200" required placeholder="Ex. : Sans attendre je veux tendre"></label>
+    <label>Tags <input name="tags" maxlength="300" placeholder="adoration, louange, entrée…"></label>
+    <label>Moment du culte <input name="moment" list="liste-moments" maxlength="100" value="{{ moment_suggere }}" placeholder="Ex. : Cantique d'entrée"></label>
+    <details>
+      <summary>Options : auteur, coller des paroles</summary>
+      <label>Auteur <input name="auteur" maxlength="200"></label>
+      <label>Paroles à découper en diapos
+        <textarea name="paroles" rows="6" placeholder="1. Premier couplet…&#10;&#10;Refrain&#10;…"></textarea>
+        <small>Laissez vide pour taper les paroles diapo par diapo.</small>
+      </label>
+    </details>
+    <p class="message message-error" data-erreur hidden></p>
+    <button type="submit" class="bouton-principal">Créer et commencer la saisie</button>
+  </form>
+</dialog>
+{% endif %}
 
 <dialog id="dlg-texte" class="dialogue" aria-labelledby="dlg-texte-titre">
   <form hx-post="{% url 'cultes:ajouter_texte' culte.pk %}" hx-target="#espace" hx-swap="outerHTML" data-ferme-apres>

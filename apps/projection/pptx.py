@@ -12,6 +12,7 @@ from pptx.enum.shapes import MSO_SHAPE
 from pptx.enum.text import MSO_ANCHOR, PP_ALIGN
 from pptx.util import Emu, Pt
 
+from apps.chants import mise_en_forme
 from apps.cultes import diapos as d
 
 from . import rendu
@@ -21,6 +22,7 @@ EMU_PAR_PT = 12700
 LARGEUR = Emu(rendu.LARGEUR_PT * EMU_PAR_PT)  # 13,33 pouces
 HAUTEUR = Emu(rendu.HAUTEUR_PT * EMU_PAR_PT)  # 7,5 pouces
 MISE_EN_PAGE_VIERGE = 6
+ALIGNEMENTS = {"gauche": PP_ALIGN.LEFT, "centre": PP_ALIGN.CENTER, "droite": PP_ALIGN.RIGHT}
 
 
 def rgb(hexa):
@@ -64,7 +66,7 @@ class Exporteur:
         diapositive = self.presentation.slides.add_slide(
             self.presentation.slide_layouts[MISE_EN_PAGE_VIERGE]
         )
-        self.fond(diapositive)
+        self.fond(diapositive, diapo.couleur_fond)
 
         if diapo.type == d.BIENVENUE and self.image_bienvenue:
             self.image_pleine_page(diapositive, self.image_bienvenue)
@@ -82,11 +84,12 @@ class Exporteur:
         notes = f"{nom} — {diapo.libelle}" if diapo.libelle and diapo.libelle != nom else nom
         diapositive.notes_slide.notes_text_frame.text = notes
 
-    def fond(self, diapositive):
+    def fond(self, diapositive, couleur_diapo=""):
         remplissage = diapositive.background.fill
         remplissage.solid()
-        remplissage.fore_color.rgb = rgb(self.theme.couleur_fond)
-        if self.image_fond:
+        remplissage.fore_color.rgb = rgb(couleur_diapo or self.theme.couleur_fond)
+        # Une couleur choisie pour la diapo remplace aussi l'image de fond du thème.
+        if self.image_fond and not couleur_diapo:
             self.image_pleine_page(diapositive, self.image_fond)
 
     def image_pleine_page(self, diapositive, contenu):
@@ -122,18 +125,29 @@ class Exporteur:
 
         taille = Pt(round(rendu.taille_pt(diapo, self.theme)))
         majuscules = rendu.en_majuscules(diapo, self.theme)
-        for i, ligne in enumerate(diapo.lignes or [""]):
+        if diapo.html:
+            # Diapo de chant mise en forme : un « run » par morceau stylé.
+            lignes = [[(m.texte, m.style) for m in ligne] for ligne in mise_en_forme.lignes(diapo.html)]
+        else:
+            lignes = [[(ligne, mise_en_forme.Style())] for ligne in diapo.lignes]
+        for i, morceaux in enumerate(lignes or [[]]):
             paragraphe = cadre.paragraphs[0] if i == 0 else cadre.add_paragraph()
-            paragraphe.alignment = PP_ALIGN.CENTER
+            paragraphe.alignment = ALIGNEMENTS.get(diapo.alignement, PP_ALIGN.CENTER)
             paragraphe.line_spacing = 1.0
-            morceau = paragraphe.add_run()
-            morceau.text = ligne.upper() if majuscules else ligne
-            fonte = morceau.font
-            fonte.name = police
-            fonte.size = taille
-            fonte.bold = gras
-            fonte.italic = italique
-            fonte.color.rgb = rgb(self.theme.couleur_texte)
+            if not morceaux:
+                # Ligne vide : garder sa hauteur.
+                paragraphe.font.size = taille
+                continue
+            for texte, style in morceaux:
+                morceau = paragraphe.add_run()
+                morceau.text = texte.upper() if majuscules else texte
+                fonte = morceau.font
+                fonte.name = police
+                fonte.size = taille
+                fonte.bold = gras if style.gras is None else style.gras
+                fonte.italic = italique or style.italique
+                fonte.underline = style.souligne
+                fonte.color.rgb = rgb(style.couleur or self.theme.couleur_texte)
 
 
 def exporter(culte):

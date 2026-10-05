@@ -9,7 +9,6 @@ urlpatterns = [
     path("", accueil, name="accueil"),
     path("sante/", sante, name="sante"),
     path("comptes/", include("apps.comptes.urls")),
-    path("chants/", include("apps.chants.urls")),
     path("cultes/", include("apps.cultes.urls")),
     path("themes/", include("apps.projection.urls")),
     path("admin/", admin.site.urls),

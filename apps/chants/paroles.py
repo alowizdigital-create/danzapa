@@ -24,6 +24,7 @@ formulaire de modification.
 
 import re
 from dataclasses import dataclass
+from math import ceil
 
 COUPLET = "couplet"
 REFRAIN = "refrain"
@@ -114,3 +115,37 @@ def vers_texte(blocs):
         else:
             parties.append(f"{LIBELLES[bloc.type]}\n{bloc.texte}")
     return "\n\n".join(parties)
+
+
+def decouper_lignes(lignes, maximum):
+    """Répartit les lignes en paquets d'au plus `maximum`, de tailles proches.
+
+    6 lignes avec un maximum de 4 donnent 3 + 3 plutôt que 4 + 2.
+    """
+    lignes = list(lignes)
+    if not lignes:
+        return []
+    maximum = max(1, maximum)
+    nb = ceil(len(lignes) / maximum)
+    taille, reste = divmod(len(lignes), nb)
+    paquets, debut = [], 0
+    for i in range(nb):
+        fin = debut + taille + (1 if i < reste else 0)
+        paquets.append(lignes[debut:fin])
+        debut = fin
+    return paquets
+
+
+def en_diapos(texte, lignes_par_diapo=4):
+    """Paroles collées → texte de chaque diapo, dans l'ordre saisi.
+
+    Chaque bloc est découpé en diapos d'au plus N lignes ; le numéro du
+    couplet précède sa première ligne, comme dans les présentations actuelles.
+    """
+    diapos = []
+    for bloc in decouper(texte):
+        for i, paquet in enumerate(decouper_lignes(bloc.texte.splitlines(), lignes_par_diapo)):
+            if i == 0 and bloc.type == COUPLET and bloc.numero:
+                paquet = [f"{bloc.numero}. {paquet[0]}"] + paquet[1:]
+            diapos.append("\n".join(paquet))
+    return diapos

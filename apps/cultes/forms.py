@@ -37,15 +37,13 @@ def parametres_form(donnees, instance):
 class ElementForm(forms.ModelForm):
     class Meta:
         model = ElementCulte
-        fields = ["moment", "repeter_refrain", "titre", "contenu"]
+        fields = ["moment", "titre", "contenu"]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if self.instance.type == ElementCulte.CHANT:
             del self.fields["titre"]
             del self.fields["contenu"]
-        else:
-            del self.fields["repeter_refrain"]
 
 
 class TexteLibreForm(forms.ModelForm):

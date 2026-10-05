@@ -1,5 +1,5 @@
 {# Vignettes, diapo courante, propriétés et barre d'état. Renvoyé après chaque modification (HTMX). #}
-<div id="espace" class="espace{% if theme.image_bienvenue %} avec-image-bienvenue{% endif %}" data-selection="{{ selection|default_if_none:'' }}" style="{{ theme.style_css }}">
+<div id="espace" class="espace{% if theme.image_bienvenue %} avec-image-bienvenue{% endif %}" data-selection="{{ selection|default_if_none:'' }}" data-edition="{{ edition|default_if_none:'' }}" data-piece="{{ piece|default_if_none:'' }}" data-culte="{{ culte.pk }}" style="{{ theme.style_css }}">
   <datalist id="liste-moments">{% for m in moments %}<option value="{{ m }}">{% endfor %}</datalist>
 
   <aside class="vignettes" aria-label="Diapositives">
@@ -16,14 +16,14 @@
 
     <div class="groupes"{% if peut_modifier %} data-reordonner="{% url 'cultes:reordonner' culte.pk %}"{% endif %}>
       {% for groupe in groupes %}{% if groupe.element %}
-        <div class="groupe{% if groupe.element.masque %} groupe-masque{% endif %}" data-element="{{ groupe.element.pk }}">
+        <div class="groupe{% if groupe.element.masque %} groupe-masque{% endif %}" data-element="{{ groupe.element.pk }}"{% if groupe.element.chant_id %} data-chant="{{ groupe.element.chant_id }}" data-reordonner-diapos="{% url 'cultes:reordonner_diapos' culte.pk groupe.element.chant_id %}"{% endif %}>
           <div class="groupe-entete" title="{% if peut_modifier %}Glisser pour déplacer tout l'élément{% endif %}">
             {% if peut_modifier %}<span class="poignee" aria-hidden="true">⠿</span>{% endif %}
             <span class="groupe-nom">{{ groupe.element.nom }}</span>
             {% if groupe.element.masque %}<span class="badge">masqué</span>{% endif %}
           </div>
           {% for diapo in groupe.diapos %}
-            <button type="button" class="vignette" data-numero="{{ diapo.numero }}" data-element="{{ groupe.element.pk }}" title="{{ groupe.element.nom }} · {{ diapo.libelle }}">
+            <button type="button" class="vignette" data-numero="{{ diapo.numero }}" data-element="{{ groupe.element.pk }}"{% if diapo.chant_id %} data-chant="{{ diapo.chant_id }}"{% endif %}{% if diapo.piece_id %} data-piece="{{ diapo.piece_id }}"{% endif %} title="{{ groupe.element.nom }} · {{ diapo.libelle }}">
               <span class="vignette-numero">{{ diapo.numero }}</span>
               {% include "cultes/_diapo.html" %}
             </button>
@@ -33,11 +33,15 @@
     </div>
 
     {% if not a_des_elements %}
-      <p class="vignettes-vide">Aucun chant pour l'instant.{% if peut_modifier %}<br><button type="button" class="bouton-lien" data-dialogue="dlg-chant">Insérer un chant</button>{% endif %}</p>
+      <p class="vignettes-vide">Aucun chant pour l'instant.{% if peut_modifier %}<br><button type="button" class="bouton-lien" data-dialogue="dlg-nouveau-chant">Nouveau chant</button> · <button type="button" class="bouton-lien" data-dialogue="dlg-chant">Insérer un chant</button>{% endif %}</p>
     {% endif %}
   </aside>
 
   <section class="centre">
+    <div id="bandeau-edition" class="bandeau-edition" hidden>
+      <span>✎ Édition de « <strong data-titre-edition></strong> » — tout est enregistré automatiquement. <span class="aide">Ctrl+Entrée : nouvelle diapo · Échap : fermer</span></span>
+      <button type="button" class="bouton-principal" data-chant-action="fermer">Fermer le chant</button>
+    </div>
     <div class="scene">
       <div id="diapo-grande" class="diapo diapo-grande"></div>
     </div>
@@ -56,9 +60,7 @@
             <label>Moment
               <input name="moment" value="{{ element.moment }}" list="liste-moments" maxlength="100" placeholder="Ex. : Cantique d'entrée">
             </label>
-            {% if element.type == "chant" %}
-              <label class="case"><input type="checkbox" name="repeter_refrain"{% if element.repeter_refrain %} checked{% endif %}> Répéter le refrain après chaque couplet</label>
-            {% else %}
+            {% if element.type != "chant" %}
               <label>Titre <input name="titre" value="{{ element.titre }}" maxlength="200"></label>
               <label class="large">Texte
                 <textarea name="contenu" rows="4">{{ element.contenu }}</textarea>
@@ -66,9 +68,17 @@
               </label>
             {% endif %}
           </form>
+          {% if element.type == "chant" and peut_editer_chants %}
+            <form class="form-proprietes form-chant" hx-post="{% url 'cultes:infos_chant' culte.pk element.chant_id %}" hx-trigger="change" hx-target="#espace" hx-swap="outerHTML">
+              <label>Titre du chant <input name="titre" value="{{ element.chant.titre }}" maxlength="200" required></label>
+              <label>Tags <input name="tags" value="{{ element.chant.tags }}" maxlength="300" placeholder="adoration, louange…"></label>
+              <label>Auteur <input name="auteur" value="{{ element.chant.auteur }}" maxlength="200"></label>
+            </form>
+            {% with nb=element.chant.utilisations.count %}{% if nb > 1 %}<p class="aide">Ce chant est utilisé dans {{ nb }} cultes : une modification s'applique partout.</p>{% endif %}{% endwith %}
+          {% endif %}
           <div class="actions-element">
-            {% if element.type == "chant" and perms.chants.change_chant %}
-              <a class="bouton-secondaire" href="{% url 'chants:modification' element.chant.pk %}?next={{ culte.get_absolute_url|urlencode }}">Corriger les paroles</a>
+            {% if element.type == "chant" and peut_editer_chants %}
+              <button type="button" class="bouton-principal" data-chant-action="editer" data-chant="{{ element.chant_id }}">✎ Modifier le chant</button>
             {% endif %}
             <button type="button" class="bouton-secondaire" data-action="masquer" hx-post="{% url 'cultes:basculer_masque' culte.pk element.pk %}" hx-target="#espace" hx-swap="outerHTML">{% if element.masque %}Afficher{% else %}Masquer{% endif %}</button>
             <button type="button" class="bouton-secondaire" data-action="monter" hx-post="{% url 'cultes:deplacer_element' culte.pk element.pk %}" hx-vals='{"sens": "haut"}' hx-target="#espace" hx-swap="outerHTML" title="Monter">↑</button>

@@ -1,24 +1,51 @@
-// Éditeur de culte : sélection des diapos, ruban, glisser-déposer, dialogues.
+// Éditeur de culte : sélection des diapos, ruban, glisser-déposer, dialogues,
+// et saisie des chants directement sur la grande diapo (« mode édition »).
+//
 // Le fragment #espace est remplacé par le serveur après chaque modification
-// (HTMX) : `initialiserEspace` est rejoué à chaque fois.
+// de structure (HTMX) : `initialiserEspace` est rejoué à chaque fois. La saisie
+// du texte, elle, est envoyée en arrière-plan (fetch) sans recharger l'espace,
+// pour ne jamais déplacer le curseur pendant qu'on tape.
 (function () {
   "use strict";
 
   let vue = "normal";
   let numeroCourant = 1;
+  let edition = ""; // identifiant du chant ouvert en édition
+  let minuterie = null;
+  let modifie = false;
+  let file = Promise.resolve(); // sauvegardes envoyées dans l'ordre
+  let plage = null; // dernière sélection de texte dans la diapo (pour la couleur)
 
+  const DELAI_SAUVEGARDE = 700;
   const espace = () => document.getElementById("espace");
+  const grande = () => document.getElementById("diapo-grande");
+  const zoneEditable = () => grande() && grande().querySelector('.diapo-contenu[contenteditable="true"]');
 
-  function selectionner(numero) {
+  function jeton() {
+    try {
+      return JSON.parse(document.body.getAttribute("hx-headers"))["X-CSRFToken"];
+    } catch (e) {
+      return "";
+    }
+  }
+
+  function urlChant(chant, suite) {
+    return `/cultes/${espace().dataset.culte}/chants/${chant}/${suite}`;
+  }
+
+  // ------------------------------------------------------------ Sélection
+
+  function selectionner(numero, { focus = false } = {}) {
     const e = espace();
     if (!e) return;
+    sauverMaintenant();
     const vignettes = Array.from(e.querySelectorAll(".vignette"));
-    const grande = document.getElementById("diapo-grande");
+    const g = grande();
     if (!vignettes.length) {
-      grande.className = "diapo diapo-grande diapo-vide";
-      grande.innerHTML = "";
+      g.className = "diapo diapo-grande diapo-vide";
+      g.innerHTML = "";
       e.querySelectorAll(".proprietes").forEach((p) => (p.hidden = true));
-      majActionsRuban(null);
+      majRuban(null);
       return;
     }
     numero = Math.min(Math.max(1, numero), vignettes.length);
@@ -26,25 +53,71 @@
     vignettes.forEach((v) => v.classList.toggle("active", v === vignette));
 
     const source = vignette.querySelector(".diapo");
-    grande.className = source.className + " diapo-grande";
-    grande.setAttribute("style", source.getAttribute("style") || "");
-    grande.innerHTML = source.innerHTML;
+    g.className = source.className + " diapo-grande";
+    g.setAttribute("style", source.getAttribute("style") || "");
+    g.innerHTML = source.innerHTML;
+    g.dataset.piece = vignette.dataset.piece || "";
+    g.dataset.chant = vignette.dataset.chant || "";
+    g.dataset.alignement = source.dataset.alignement || "centre";
+    g.dataset.echelle = source.dataset.echelle || "100";
+    g.dataset.fond = source.dataset.fond || "";
+
+    const editable = edition && g.dataset.piece && g.dataset.chant === edition;
+    g.classList.toggle("diapo-editable", !!editable);
+    if (editable) {
+      const contenu = g.querySelector(".diapo-contenu");
+      contenu.contentEditable = "true";
+      contenu.spellcheck = true;
+      if (!contenu.innerHTML.trim()) contenu.innerHTML = "<div><br></div>";
+      if (focus) placerCurseurAlaFin(contenu);
+    }
 
     const position = e.querySelector("[data-position]");
     if (position) position.textContent = numero;
 
     const element = vignette.dataset.element;
     e.querySelectorAll(".proprietes").forEach((p) => (p.hidden = p.dataset.element !== element));
-    majActionsRuban(element);
-
     numeroCourant = numero;
+    majRuban(vignette);
     vignette.scrollIntoView({ block: "nearest" });
   }
 
-  // Les boutons « Élément sélectionné » du ruban déclenchent ceux du panneau
-  // de propriétés visible ; ils sont désactivés sur la diapo de bienvenue.
-  function majActionsRuban(element) {
-    document.querySelectorAll("[data-cible]").forEach((b) => (b.disabled = !element));
+  function placerCurseurAlaFin(zone) {
+    zone.focus();
+    const range = document.createRange();
+    range.selectNodeContents(zone);
+    range.collapse(false);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+  }
+
+  // État des boutons du ruban selon la diapo sélectionnée et le mode édition.
+  function majRuban(vignette) {
+    const element = vignette ? vignette.dataset.element : "";
+    const chant = vignette ? vignette.dataset.chant : "";
+    const surPiece = !!(edition && vignette && vignette.dataset.piece && chant === edition);
+    document.querySelectorAll("[data-cible]").forEach((b) => (b.disabled = !element || !!edition));
+    document.querySelectorAll("[data-en-edition]").forEach((b) => {
+      const pourDiapo = b.matches("[data-format], [data-diapo-reglage], [data-couleur-texte], [data-couleur-fond]")
+        || ["dupliquer", "haut", "bas", "supprimer"].includes(b.dataset.diapoAction);
+      b.disabled = !edition || (pourDiapo && !surPiece);
+    });
+    document.querySelectorAll('[data-chant-action="editer"][data-hors-edition]').forEach((b) => (b.disabled = !!edition || !chant));
+    document.querySelectorAll("[data-couleur-texte], [data-couleur-fond]").forEach((i) => {
+      i.closest("label").classList.toggle("desactive", i.disabled);
+    });
+
+    const e = espace();
+    document.body.classList.toggle("mode-edition", !!edition);
+    if (!e) return;
+    e.querySelectorAll(".groupe[data-chant]").forEach((gr) => gr.classList.toggle("groupe-edition", gr.dataset.chant === edition));
+    const bandeau = document.getElementById("bandeau-edition");
+    if (bandeau) {
+      bandeau.hidden = !edition;
+      const groupe = edition && e.querySelector(`.groupe[data-chant="${edition}"] .groupe-nom`);
+      bandeau.querySelector("[data-titre-edition]").textContent = groupe ? groupe.textContent : "";
+    }
   }
 
   function appliquerVue() {
@@ -57,14 +130,20 @@
     const e = espace();
     if (!e) return;
     appliquerVue();
+    if (e.dataset.edition) edition = e.dataset.edition;
+    if (edition && !e.querySelector(`.groupe[data-chant="${edition}"]`)) edition = "";
 
     let numero = numeroCourant;
-    const selection = e.dataset.selection;
-    if (selection) {
-      const v = e.querySelector(`.vignette[data-element="${selection}"]`);
-      if (v) numero = Number(v.dataset.numero);
+    let focus = false;
+    const piece = e.dataset.piece && e.querySelector(`.vignette[data-piece="${e.dataset.piece}"]`);
+    const selection = e.dataset.selection && e.querySelector(`.vignette[data-element="${e.dataset.selection}"]`);
+    if (piece) {
+      numero = Number(piece.dataset.numero);
+      focus = true;
+    } else if (selection) {
+      numero = Number(selection.dataset.numero);
     }
-    selectionner(numero);
+    selectionner(numero, { focus });
 
     const liste = e.querySelector(".groupes[data-reordonner]");
     if (liste && window.Sortable && !liste.dataset.triable) {
@@ -72,6 +151,7 @@
       Sortable.create(liste, {
         animation: 150,
         draggable: ".groupe",
+        handle: ".groupe-entete",
         onEnd(evt) {
           if (evt.oldIndex === evt.newIndex) return;
           const ordre = Array.from(liste.querySelectorAll(".groupe")).map((g) => g.dataset.element);
@@ -84,76 +164,318 @@
         },
       });
     }
+    activerTriDiapos();
   }
 
+  // En mode édition, les vignettes du chant se réordonnent par glisser-déposer.
+  function activerTriDiapos() {
+    const e = espace();
+    if (!edition || !e || !window.Sortable) return;
+    const groupe = e.querySelector(`.groupe[data-chant="${edition}"]`);
+    if (!groupe || groupe.dataset.triDiapos) return;
+    groupe.dataset.triDiapos = "1";
+    Sortable.create(groupe, {
+      animation: 150,
+      draggable: ".vignette[data-piece]",
+      async onEnd(evt) {
+        if (evt.oldIndex === evt.newIndex) return;
+        await sauverMaintenant();
+        const ordre = Array.from(groupe.querySelectorAll(".vignette[data-piece]")).map((v) => v.dataset.piece);
+        htmx.ajax("POST", groupe.dataset.reordonnerDiapos, {
+          target: "#espace",
+          swap: "outerHTML",
+          values: { ordre: ordre, piece: evt.item.dataset.piece },
+        });
+      },
+    });
+  }
+
+  // ------------------------------------------------------------ Mode édition
+
+  function ouvrirEdition(chant) {
+    if (!chant) return;
+    edition = String(chant);
+    const e = espace();
+    // Se placer sur la première diapo du chant (après la diapo titre).
+    const v = e.querySelector(`.vignette[data-chant="${edition}"][data-piece]`) || e.querySelector(`.vignette[data-chant="${edition}"]`);
+    selectionner(v ? Number(v.dataset.numero) : numeroCourant, { focus: true });
+    activerTriDiapos();
+  }
+
+  async function fermerEdition() {
+    await sauverMaintenant();
+    edition = "";
+    const zone = zoneEditable();
+    if (zone) zone.blur();
+    selectionner(numeroCourant);
+  }
+
+  // Copie immédiate du texte saisi dans la vignette (avant la réponse du serveur).
+  function majVignette(piece, contenu, reglages) {
+    const v = espace().querySelector(`.vignette[data-piece="${piece}"] .diapo`);
+    if (!v) return;
+    if (contenu !== undefined) v.querySelector(".diapo-contenu").innerHTML = contenu;
+    if (reglages) {
+      if (reglages.taille) v.style.setProperty("--taille", reglages.taille);
+      if (reglages.alignement) {
+        v.dataset.alignement = reglages.alignement;
+        v.querySelector(".diapo-contenu").className = "diapo-contenu aligner-" + reglages.alignement;
+      }
+      if (reglages.echelle) v.dataset.echelle = reglages.echelle;
+      if (reglages.couleur_fond !== undefined) {
+        v.dataset.fond = reglages.couleur_fond;
+        v.style.background = reglages.couleur_fond || "";
+      }
+    }
+  }
+
+  function planifierSauvegarde() {
+    modifie = true;
+    indiquer("Modification…");
+    const zone = zoneEditable();
+    if (zone) majVignette(grande().dataset.piece, zone.innerHTML);
+    clearTimeout(minuterie);
+    minuterie = setTimeout(sauverMaintenant, DELAI_SAUVEGARDE);
+  }
+
+  function donneesDiapo() {
+    const g = grande();
+    const zone = zoneEditable();
+    if (!g || !zone || !g.dataset.piece) return null;
+    const corps = new FormData();
+    corps.append("contenu", zone.innerHTML);
+    corps.append("alignement", g.dataset.alignement || "centre");
+    corps.append("echelle", g.dataset.echelle || "100");
+    corps.append("couleur_fond", g.dataset.fond || "");
+    return { corps, chant: g.dataset.chant, piece: g.dataset.piece };
+  }
+
+  function sauverMaintenant() {
+    clearTimeout(minuterie);
+    if (!modifie) return file;
+    modifie = false;
+    const envoi = donneesDiapo();
+    if (!envoi) return file;
+    file = file
+      .then(() =>
+        fetch(urlChant(envoi.chant, `diapos/${envoi.piece}/`), {
+          method: "POST",
+          body: envoi.corps,
+          headers: { "X-CSRFToken": jeton() },
+          credentials: "same-origin",
+        })
+      )
+      .then(async (reponse) => {
+        if (!reponse.ok) throw new Error(await reponse.text());
+        const d = await reponse.json();
+        majVignette(envoi.piece, d.contenu, d);
+        const g = grande();
+        if (g && g.dataset.piece === envoi.piece) g.style.setProperty("--taille", d.taille);
+        indiquerEnregistre();
+      })
+      .catch((erreur) => {
+        modifie = true; // on réessaiera à la prochaine modification
+        indiquer("⚠ Non enregistré" + (erreur.message && erreur.message.length < 120 ? " : " + erreur.message : ""), true);
+      });
+    return file;
+  }
+
+  // Réglages de la diapo (taille, alignement, fond) : appliqués tout de suite, puis enregistrés.
+  function reglerDiapo(reglage, valeur) {
+    const g = grande();
+    if (!zoneEditable()) return;
+    if (reglage === "plus" || reglage === "moins") {
+      const echelle = Number(g.dataset.echelle || 100) + (reglage === "plus" ? 10 : -10);
+      g.dataset.echelle = String(Math.min(200, Math.max(50, echelle)));
+    } else if (["gauche", "centre", "droite"].includes(reglage)) {
+      g.dataset.alignement = reglage;
+      g.querySelector(".diapo-contenu").classList.remove("aligner-gauche", "aligner-centre", "aligner-droite");
+      g.querySelector(".diapo-contenu").classList.add("aligner-" + reglage);
+    } else if (reglage === "fond") {
+      g.dataset.fond = valeur;
+      g.style.background = valeur;
+    } else if (reglage === "fond-theme") {
+      g.dataset.fond = "";
+      g.style.background = "";
+    }
+    majVignette(g.dataset.piece, undefined, { alignement: g.dataset.alignement, couleur_fond: g.dataset.fond });
+    modifie = true;
+    sauverMaintenant();
+  }
+
+  async function actionDiapo(action) {
+    const g = grande();
+    const chant = edition;
+    if (!chant) return;
+    await sauverMaintenant();
+    const piece = g.dataset.chant === chant ? g.dataset.piece : "";
+    const options = { target: "#espace", swap: "outerHTML" };
+    if (action === "ajouter") {
+      htmx.ajax("POST", urlChant(chant, "diapos/ajouter/"), { ...options, values: { apres: piece } });
+    } else if (!piece) {
+      return;
+    } else if (action === "dupliquer") {
+      htmx.ajax("POST", urlChant(chant, "diapos/ajouter/"), { ...options, values: { dupliquer: piece } });
+    } else if (action === "haut" || action === "bas") {
+      htmx.ajax("POST", urlChant(chant, `diapos/${piece}/deplacer/`), { ...options, values: { sens: action } });
+    } else if (action === "supprimer") {
+      if (!window.confirm("Supprimer cette diapo du chant ?")) return;
+      htmx.ajax("POST", urlChant(chant, `diapos/${piece}/supprimer/`), options);
+    }
+  }
+
+  function formater(commande, valeur) {
+    const zone = zoneEditable();
+    if (!zone) return;
+    if (plage && document.activeElement !== zone) {
+      zone.focus();
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(plage);
+    }
+    document.execCommand("styleWithCSS", false, false);
+    document.execCommand(commande, false, valeur || null);
+    planifierSauvegarde();
+  }
+
+  // ------------------------------------------------------------ Saisie
+
+  document.addEventListener("input", (evt) => {
+    if (evt.target.closest && evt.target.closest('#diapo-grande .diapo-contenu[contenteditable="true"]')) {
+      planifierSauvegarde();
+    }
+  });
+
+  // Coller : texte seul (la mise en forme de Word ou d'une page web est ignorée).
+  document.addEventListener("paste", (evt) => {
+    if (!evt.target.closest || !evt.target.closest('#diapo-grande .diapo-contenu[contenteditable="true"]')) return;
+    evt.preventDefault();
+    const texte = (evt.clipboardData || window.clipboardData).getData("text/plain");
+    document.execCommand("insertText", false, texte);
+  });
+
+  document.addEventListener("selectionchange", () => {
+    const zone = zoneEditable();
+    const sel = window.getSelection();
+    if (zone && sel.rangeCount && zone.contains(sel.anchorNode)) plage = sel.getRangeAt(0).cloneRange();
+  });
+
+  // Les boutons de mise en forme ne doivent pas faire perdre la sélection du texte.
+  document.addEventListener("mousedown", (evt) => {
+    if (evt.target.closest("[data-format], [data-diapo-reglage]")) evt.preventDefault();
+  });
+
+  document.addEventListener("input", (evt) => {
+    if (evt.target.matches && evt.target.matches("[data-couleur-texte]")) formater("foreColor", evt.target.value);
+    if (evt.target.matches && evt.target.matches("[data-couleur-fond]")) reglerDiapo("fond", evt.target.value);
+  });
+
+  // Dernière chance d'envoyer une saisie en cours si on quitte la page.
+  window.addEventListener("pagehide", () => {
+    if (!modifie) return;
+    const envoi = donneesDiapo();
+    if (!envoi) return;
+    envoi.corps.append("csrfmiddlewaretoken", jeton());
+    navigator.sendBeacon(urlChant(envoi.chant, `diapos/${envoi.piece}/`), envoi.corps);
+  });
+
   // ------------------------------------------------------------ Clics
+
+  function ouvrirDialogue(id) {
+    const dialogue = document.getElementById(id);
+    if (!dialogue) return;
+    document.querySelectorAll("dialog[open]").forEach((d) => d !== dialogue && d.close());
+    const erreur = dialogue.querySelector("[data-erreur]");
+    if (erreur) erreur.hidden = true;
+    dialogue.showModal();
+    const champ = dialogue.querySelector("input[type=search], input[name=titre], textarea, input:not([type=hidden])");
+    if (champ) champ.focus();
+  }
 
   document.addEventListener("click", (evt) => {
     const cible = evt.target.closest("button, a");
     if (!cible) return;
 
     if (cible.classList.contains("vignette")) {
-      selectionner(Number(cible.dataset.numero));
+      selectionner(Number(cible.dataset.numero), { focus: !!edition });
       return;
     }
-
     if (cible.dataset.onglet) {
       document.querySelectorAll("[data-onglet]").forEach((b) => b.classList.toggle("actif", b === cible));
       document.querySelectorAll("[data-panneau]").forEach((p) => (p.hidden = p.dataset.panneau !== cible.dataset.onglet));
       return;
     }
-
     if (cible.dataset.vue) {
       vue = cible.dataset.vue;
       appliquerVue();
       selectionner(numeroCourant);
       return;
     }
-
     if (cible.dataset.cible) {
       const bouton = espace().querySelector(`.proprietes:not([hidden]) [data-action="${cible.dataset.cible}"]`);
       if (bouton) bouton.click();
       return;
     }
-
-    if (cible.dataset.dialogue) {
-      const dialogue = document.getElementById(cible.dataset.dialogue);
-      if (dialogue) {
-        dialogue.showModal();
-        const champ = dialogue.querySelector("input[type=search], textarea, input:not([type=hidden])");
-        if (champ) champ.focus();
-      }
+    if (cible.dataset.chantAction === "editer") {
+      const active = espace().querySelector(".vignette.active");
+      ouvrirEdition(cible.dataset.chant || (active && active.dataset.chant));
       return;
     }
-
+    if (cible.dataset.chantAction === "fermer") {
+      fermerEdition();
+      return;
+    }
+    if (cible.dataset.format) {
+      formater(cible.dataset.format);
+      return;
+    }
+    if (cible.dataset.diapoReglage) {
+      reglerDiapo(cible.dataset.diapoReglage);
+      return;
+    }
+    if (cible.dataset.diapoAction) {
+      actionDiapo(cible.dataset.diapoAction);
+      return;
+    }
+    if (cible.dataset.dialogue) {
+      ouvrirDialogue(cible.dataset.dialogue);
+      return;
+    }
     if (cible.hasAttribute("data-fermer")) {
       cible.closest("dialog").close();
-      return;
-    }
-
-    // « Saisir un nouveau chant » : garder le moment déjà choisi.
-    if (cible.hasAttribute("data-avec-moment")) {
-      const moment = document.getElementById("moment-chant");
-      if (moment && moment.value) {
-        evt.preventDefault();
-        window.location = cible.href + "?moment=" + encodeURIComponent(moment.value);
-      }
     }
   });
 
-  // Double-clic dans la trieuse : revenir en vue normale sur cette diapo.
+  // Double-clic sur une diapo de chant : l'ouvrir en édition (ou, dans la
+  // trieuse, revenir en vue normale sur cette diapo).
   document.addEventListener("dblclick", (evt) => {
     const vignette = evt.target.closest(".vignette");
-    if (vignette && vue === "trieuse") {
+    if (!vignette) return;
+    if (vue === "trieuse") {
       vue = "normal";
       appliquerVue();
       selectionner(Number(vignette.dataset.numero));
+    } else if (vignette.dataset.chant && !edition && document.querySelector("[data-format]")) {
+      ouvrirEdition(vignette.dataset.chant);
+      selectionner(Number(vignette.dataset.numero), { focus: true });
     }
   });
 
-  // Flèches, Page préc./suiv., Début/Fin : naviguer entre les diapos.
   document.addEventListener("keydown", (evt) => {
-    if (evt.target.closest("input, textarea, select, dialog[open]")) return;
+    const dansDiapo = evt.target.closest && evt.target.closest('[contenteditable="true"]');
+    if (edition && (dansDiapo || !evt.target.closest("input, textarea, select, dialog[open]"))) {
+      if (evt.key === "Enter" && (evt.ctrlKey || evt.metaKey)) {
+        evt.preventDefault();
+        actionDiapo("ajouter");
+        return;
+      }
+      if (evt.key === "Escape") {
+        evt.preventDefault();
+        fermerEdition();
+        return;
+      }
+    }
+    if (dansDiapo || evt.target.closest("input, textarea, select, dialog[open]")) return;
     const pas = { ArrowDown: 1, ArrowRight: 1, PageDown: 1, ArrowUp: -1, ArrowLeft: -1, PageUp: -1 }[evt.key];
     if (pas) {
       evt.preventDefault();
@@ -174,38 +496,49 @@
     indicateur.classList.toggle("indicateur-erreur", !!erreur);
   }
 
+  function indiquerEnregistre() {
+    const heure = new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+    indiquer("✓ Enregistré à " + heure);
+  }
+
   document.addEventListener("htmx:beforeRequest", (evt) => {
     if (evt.detail.requestConfig.verb === "post") indiquer("Enregistrement…");
   });
 
   document.addEventListener("htmx:afterRequest", (evt) => {
     if (evt.detail.requestConfig.verb !== "post") return;
+    const source = evt.detail.elt;
     if (evt.detail.successful) {
-      const heure = new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
-      indiquer("✓ Enregistré à " + heure);
-      const source = evt.detail.elt;
-      if (source.hasAttribute("data-ferme-apres")) {
+      indiquerEnregistre();
+      if (source.hasAttribute && source.hasAttribute("data-ferme-apres")) {
         const dialogue = source.closest("dialog");
         if (dialogue) dialogue.close();
         if (source.tagName === "FORM") source.reset();
       }
-      if (source.classList.contains("form-titre")) {
+      if (source.classList && source.classList.contains("form-titre")) {
         document.title = source.elements.titre.value + " · Danzapa";
       }
       // Après l'ajout d'un chant, le moment suivant n'est plus « Cantique d'entrée ».
-      if (source.classList.contains("resultat")) {
+      if (source.classList && source.classList.contains("resultat")) {
         const moment = document.getElementById("moment-chant");
         if (moment) moment.value = "";
       }
     } else {
       const message = evt.detail.xhr && evt.detail.xhr.responseText;
-      indiquer("⚠ Non enregistré" + (message && message.length < 200 ? " : " + message : ""), true);
+      const court = message && message.length < 200 ? message : "";
+      indiquer("⚠ Non enregistré" + (court ? " : " + court : ""), true);
+      const zoneErreur = source.closest && source.closest("dialog") && source.closest("dialog").querySelector("[data-erreur]");
+      if (zoneErreur) {
+        zoneErreur.textContent = court || "Une erreur est survenue.";
+        zoneErreur.hidden = false;
+      }
     }
   });
 
   document.addEventListener("htmx:sendError", () => indiquer("⚠ Connexion perdue, non enregistré", true));
 
   document.addEventListener("DOMContentLoaded", () => {
+    document.execCommand("defaultParagraphSeparator", false, "div");
     initialiserEspace();
     htmx.onLoad((elt) => {
       if (elt.id === "espace") initialiserEspace();
