@@ -162,8 +162,8 @@ def base_postgresql(url):
 
 
 # Base de données :
-# - DATABASE_URL=postgresql://… (base PostgreSQL séparée, par exemple créée dans
-#   Dokploy) : comptes, mots de passe, chants et cultes y sont conservés,
+# - DATABASE_URL=postgresql://… (fourni par docker-compose.yml, service « db »)
+#   : comptes, mots de passe, chants et cultes y sont conservés,
 #   indépendamment du conteneur de l'application ;
 # - sinon DATABASE_ENGINE=postgresql avec les variables DATABASE_* ;
 # - sinon SQLite dans DATA_DIR (développement, ou volume /data).

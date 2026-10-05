@@ -1,5 +1,6 @@
 # Image de production de Danzapa (Django + Gunicorn + WhiteNoise).
-# Données persistantes (base SQLite, images des thèmes) : volume sur /data.
+# Lancée par docker-compose.yml avec sa base PostgreSQL (service « db ») ;
+# images des thèmes et clé secrète : volume sur /data.
 FROM python:3.12-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -11,6 +12,11 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PORT=8000
 
 WORKDIR /app
+
+# pg_dump pour « python manage.py sauvegarde » avec PostgreSQL.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends postgresql-client \
+    && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
 RUN pip install -r requirements.txt
@@ -28,8 +34,8 @@ RUN DJANGO_SECRET_KEY=construction-uniquement python manage.py collectstatic --n
 # « danzapa » (utile si le volume est un dossier de l'hôte appartenant à root),
 # puis l'entrypoint relance tout sous cet utilisateur non privilégié.
 # Pas d'instruction VOLUME : un volume anonyme serait recréé à chaque
-# déploiement (données perdues sans avertissement). Le volume nommé se
-# déclare dans Dokploy ; l'entrypoint prévient s'il manque.
+# déploiement (données perdues sans avertissement). Les volumes nommés sont
+# déclarés dans docker-compose.yml.
 EXPOSE 8000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \

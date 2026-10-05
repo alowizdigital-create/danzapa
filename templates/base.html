@@ -13,7 +13,7 @@
   <div class="alerte-serveur" role="alert">
     ⚠ <strong>Les données ne sont pas enregistrées durablement</strong> : aucun volume n'est monté sur <code>/data</code>.
     Chants, cultes et mots de passe seront <strong>perdus au prochain déploiement</strong>.
-    Dans Dokploy : Advanced → Volumes → Volume Mount « danzapa-data » sur <code>/data</code>, puis Deploy.
+    Déployer avec <code>docker-compose.yml</code> (service Compose dans Dokploy, voir DEPLOIEMENT.md) : la base PostgreSQL intégrée conserve tout.
   </div>
   {% endif %}
   {% if user.is_authenticated %}

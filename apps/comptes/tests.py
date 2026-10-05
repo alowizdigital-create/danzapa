@@ -88,8 +88,11 @@ class SauvegardeTests(TestCase):
         from pathlib import Path
 
         from django.core.management import call_command
+        from django.db import connection
         from django.test import override_settings
 
+        if connection.vendor != "sqlite":
+            self.skipTest("Sauvegarde SQLite")
         with tempfile.TemporaryDirectory() as dossier:
             with override_settings(DATA_DIR=Path(dossier), MEDIA_ROOT=Path(dossier) / "media"):
                 (Path(dossier) / "media" / "themes").mkdir(parents=True)
@@ -113,6 +116,26 @@ class SauvegardeTests(TestCase):
                 groupes = [n for (n,) in base.execute("SELECT name FROM auth_group")]
                 base.close()
                 self.assertIn("Éditeur", groupes)
+
+    def test_archive_postgresql_avec_pg_dump(self):
+        import tarfile
+        import tempfile
+        from io import StringIO
+        from pathlib import Path
+
+        from django.core.management import call_command
+        from django.db import connection
+        from django.test import override_settings
+
+        if connection.vendor != "postgresql":
+            self.skipTest("Lancer les tests avec DATABASE_URL=postgresql://…")
+        with tempfile.TemporaryDirectory() as dossier:
+            with override_settings(DATA_DIR=Path(dossier), MEDIA_ROOT=Path(dossier) / "media"):
+                call_command("sauvegarde", stdout=StringIO())
+                (archive,) = (Path(dossier) / "sauvegardes").glob("*.tar.gz")
+                with tarfile.open(archive) as tar:
+                    sql = tar.extractfile("base.sql").read().decode()
+        self.assertIn("CREATE TABLE public.comptes_utilisateur", sql)
 
 
 class ConfigurationProductionTests(TestCase):
@@ -233,3 +256,15 @@ class BasePostgresqlTests(TestCase):
             (reglages["NAME"], reglages["USER"], reglages["PASSWORD"], reglages["HOST"], reglages["PORT"]),
             ("danzapa", "danzapa", "m@t de passe", "danzapa-db-abc", "5432"),
         )
+
+
+class DockerComposeTests(TestCase):
+    def test_base_postgresql_integree_et_volumes_nommes(self):
+        from django.conf import settings
+
+        contenu = (settings.BASE_DIR / "docker-compose.yml").read_text(encoding="utf-8")
+        self.assertIn("image: postgres:", contenu)
+        self.assertIn("DATABASE_URL: postgresql://danzapa:", contenu)
+        self.assertIn("danzapa-postgres:/var/lib/postgresql/data", contenu)
+        self.assertIn("danzapa-data:/data", contenu)
+        self.assertNotIn("ports:", contenu)  # Dokploy relie le domaine, pas de conflit de port
