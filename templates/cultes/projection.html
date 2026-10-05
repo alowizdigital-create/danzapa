@@ -1,0 +1,27 @@
+{% load static %}<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ culte.titre }} · Projection</title>
+  <link rel="icon" href="{% static 'img/favicon.svg' %}" type="image/svg+xml">
+  <link rel="stylesheet" href="{% static 'css/danzapa.css' %}">
+  <script src="{% static 'js/projection.js' %}" defer></script>
+</head>
+{# Diaporama plein écran : une diapo à la fois, rendue comme dans l'éditeur (cultes/_diapo.html). #}
+<body class="projection{% if theme.image_bienvenue %} avec-image-bienvenue{% endif %}" style="{{ theme.style_css }}"
+      data-mode="projection" data-debut="{{ debut }}" data-canal="danzapa-projection-{{ culte.pk }}"
+      data-retour="{% url 'cultes:editeur' culte.pk %}">
+  <main class="projection-scene" aria-live="polite">
+    {% for diapo in diapos %}
+      <div class="projection-diapo" data-diapo hidden>{% include "cultes/_diapo.html" %}</div>
+    {% endfor %}
+    <div class="projection-fin" data-fin hidden>Fin du diaporama. Appuyez sur Échap pour quitter.</div>
+  </main>
+  <div class="projection-ecran" data-ecran hidden></div>
+  <div class="projection-aide" data-aide>
+    <strong>Cliquer ou appuyer sur F</strong> pour le plein écran<br>
+    → ou Espace : diapo suivante · ← : précédente · B : écran noir · Échap : quitter
+  </div>
+</body>
+</html>

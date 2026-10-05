@@ -500,6 +500,32 @@ def reordonner(request, pk):
 
 
 @peut_voir
+def projection(request, pk):
+    """Diaporama plein écran (ou vue présentateur avec ?presentateur=1).
+
+    Mêmes diapos que l'export : les éléments masqués ne sont pas projetés.
+    `?depuis=N` démarre à la diapo N de l'éditeur (ou à la suivante visible).
+    """
+    culte = get_object_or_404(Culte.objects.select_related("theme"), pk=pk)
+    theme = culte.theme_effectif
+    groupes = rendu.annoter(diapos.groupes_du_culte(culte), theme)
+    visibles = [diapo for groupe in groupes for diapo in groupe.diapos if not diapo.masque]
+    for diapo, groupe in ((diapo, groupe) for groupe in groupes for diapo in groupe.diapos):
+        diapo.nom_groupe = groupe.element.nom if groupe.element else "Bienvenue"
+    try:
+        depuis = int(request.GET.get("depuis", 1))
+    except ValueError:
+        depuis = 1
+    debut = next((i for i, diapo in enumerate(visibles) if diapo.numero >= depuis), 0)
+    presentateur = request.GET.get("presentateur") == "1"
+    return render(
+        request,
+        "cultes/projection_presentateur.html" if presentateur else "cultes/projection.html",
+        {"culte": culte, "theme": theme, "diapos": visibles, "debut": debut},
+    )
+
+
+@peut_voir
 def exporter_pptx(request, pk):
     culte = get_object_or_404(Culte.objects.select_related("theme"), pk=pk)
     reponse = HttpResponse(

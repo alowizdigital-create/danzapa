@@ -81,8 +81,26 @@ danzapa/
 2. ✅ **Bibliothèque de chants** : CRUD, recherche, import de paroles collées avec découpage automatique.
 3. ✅ **Préparation d'un culte** : éditeur façon PowerPoint, ajout de chants, réordonnancement.
 4. ✅ **Export PowerPoint** : génération du `.pptx` selon le thème.
-5. **Mode projection** : plein écran, clavier, vue présentateur.
+5. ✅ **Mode projection** : plein écran, clavier, vue présentateur.
 6. **Module Bible** : import d'une version libre de droits, recherche, projection de versets.
+
+## Projeter un culte
+
+Dans l'éditeur, **▶ Projeter** (ou **F5**) lance le diaporama depuis le début ; **Maj+F5** ou l'onglet **Diaporama** le lance depuis la diapo sélectionnée. Les éléments masqués ne sont pas projetés.
+
+| Touche | Action |
+|---|---|
+| → ↓ Espace Entrée, clic | Diapo suivante |
+| ← ↑ Retour arrière | Diapo précédente |
+| Début / Fin | Première / dernière diapo |
+| Numéro puis Entrée | Aller à cette diapo |
+| B ou . / W ou , | Écran noir / blanc (même touche pour revenir) |
+| F | Plein écran |
+| Échap | Quitter le plein écran, puis revenir à l'éditeur |
+
+**Mode présentateur** (onglet Diaporama) : diapo actuelle et suivante, chronomètre et liste des diapos. Le bouton « Ouvrir l'écran de projection » ouvre une seconde fenêtre, à placer sur le vidéoprojecteur, qui suit la vue présentateur.
+
+**⇩ PowerPoint** (à côté de Projeter, ou dans la liste des cultes) télécharge le culte en `.pptx`.
 
 ## Mise en ligne
 

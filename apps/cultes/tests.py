@@ -115,6 +115,38 @@ class VuesTests(TestCase):
         self.hx_post(self.url("ajouter_chant"), {"chant": chant.pk, "moment": moment})
         return self.culte.elements.last()
 
+    def test_projection_sans_les_diapos_masquees(self):
+        element = self.ajouter(self.chant, "Louange")
+        cache = self.ajouter(self.autre)
+        cache.masque = True
+        cache.save()
+        self.client.force_login(self.lecteur)  # un Lecteur peut projeter
+        reponse = self.client.get(self.url("projection"))
+        self.assertEqual(reponse.status_code, 200)
+        attendues = [d for d in diapos.diapos_du_culte(self.culte) if not d.masque]
+        self.assertEqual(len(reponse.context["diapos"]), len(attendues))
+        self.assertEqual(reponse.context["diapos"][0].type, diapos.BIENVENUE)
+        self.assertNotContains(reponse, "À toi la gloire")
+        self.assertContains(reponse, 'data-mode="projection"')
+        self.assertEqual(reponse.context["debut"], 0)
+        # ?depuis=3 : 3e diapo de l'éditeur, donc index 2 parmi les visibles.
+        self.assertEqual(self.client.get(self.url("projection"), {"depuis": "3"}).context["debut"], 2)
+        self.assertEqual(self.client.get(self.url("projection"), {"depuis": "x"}).context["debut"], 0)
+        presentateur = self.client.get(self.url("projection"), {"presentateur": "1"})
+        self.assertContains(presentateur, 'data-mode="presentateur"')
+        self.assertContains(presentateur, "Ouvrir l'écran de projection")
+        self.assertTrue(element.pk)
+
+    def test_icones_projeter_et_exporter(self):
+        editeur = self.client.get(self.url("editeur"))
+        self.assertNotContains(editeur, "bandeau-edition")
+        self.assertContains(editeur, f'href="{self.url("projection")}" data-projeter')
+        self.assertContains(editeur, self.url("export_pptx"))
+        self.assertNotContains(editeur, "Disponible à l'étape 5")
+        liste = self.client.get(reverse("cultes:liste"))
+        self.assertContains(liste, self.url("projection"))
+        self.assertContains(liste, self.url("export_pptx"))
+
     def test_creation_d_un_culte(self):
         reponse = self.client.post(reverse("cultes:creation"), {"date": "2026-09-27", "titre": ""})
         culte = Culte.objects.get(date=date(2026, 9, 27))

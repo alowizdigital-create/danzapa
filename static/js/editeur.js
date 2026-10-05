@@ -131,12 +131,6 @@
     document.body.classList.toggle("mode-edition", !!edition);
     if (!e) return;
     e.querySelectorAll(".groupe[data-chant]").forEach((gr) => gr.classList.toggle("groupe-edition", gr.dataset.chant === edition));
-    const bandeau = document.getElementById("bandeau-edition");
-    if (bandeau) {
-      bandeau.hidden = !edition;
-      const groupe = edition && e.querySelector(`.groupe[data-chant="${edition}"] .groupe-nom`);
-      bandeau.querySelector("[data-titre-edition]").textContent = groupe ? groupe.textContent : "";
-    }
   }
 
   function appliquerVue() {
@@ -472,6 +466,34 @@
       if (zone) placerCurseurAlaFin(zone);
       else evt.target.blur();
     }
+  });
+
+  // Projection : F5 depuis le début, Maj+F5 depuis la diapo actuelle (comme PowerPoint).
+  function urlProjection(depuisActuelle) {
+    const lien = document.querySelector("[data-projeter]");
+    if (!lien) return null;
+    const url = new URL(lien.href, window.location.href);
+    if (depuisActuelle && numeroCourant) url.searchParams.set("depuis", numeroCourant);
+    return url;
+  }
+
+  function projeter(depuisActuelle) {
+    const url = urlProjection(depuisActuelle);
+    if (!url) return;
+    sauverMaintenant().finally(() => (window.location.href = url.href));
+  }
+
+  document.addEventListener("keydown", (evt) => {
+    if (evt.key !== "F5" || evt.ctrlKey || evt.metaKey) return;
+    evt.preventDefault();
+    projeter(evt.shiftKey);
+  });
+
+  document.addEventListener("click", (evt) => {
+    const lien = evt.target.closest("[data-projeter]");
+    if (!lien || lien.dataset.projeter === "presentateur") return;
+    evt.preventDefault();
+    projeter(lien.dataset.projeter === "actuelle");
   });
 
   // Dernière chance d'envoyer une saisie en cours si on quitte la page.

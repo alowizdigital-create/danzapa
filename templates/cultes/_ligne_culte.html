@@ -4,4 +4,6 @@
     <span class="liste-meta">{{ culte.date|date:"l j F Y"|capfirst }}</span>
   </a>
   <span class="badge{% if culte.statut == 'pret' %} badge-pret{% endif %}">{{ culte.get_statut_display }}</span>
+  <a class="icone-culte" href="{% url 'cultes:projection' culte.pk %}" title="Projeter" aria-label="Projeter {{ culte.titre }}">▶</a>
+  <a class="icone-culte" href="{% url 'cultes:export_pptx' culte.pk %}" download title="Exporter en PowerPoint" aria-label="Exporter {{ culte.titre }} en PowerPoint">⇩</a>
 </li>

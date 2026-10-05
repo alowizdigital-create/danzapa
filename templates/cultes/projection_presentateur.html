@@ -1,0 +1,45 @@
+{% load static %}<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ culte.titre }} · Mode présentateur</title>
+  <link rel="icon" href="{% static 'img/favicon.svg' %}" type="image/svg+xml">
+  <link rel="stylesheet" href="{% static 'css/danzapa.css' %}">
+  <script src="{% static 'js/projection.js' %}" defer></script>
+</head>
+{# Vue présentateur : pilote l'écran de projection (autre fenêtre) via BroadcastChannel. #}
+<body class="presentateur{% if theme.image_bienvenue %} avec-image-bienvenue{% endif %}" style="{{ theme.style_css }}"
+      data-mode="presentateur" data-debut="{{ debut }}" data-canal="danzapa-projection-{{ culte.pk }}"
+      data-retour="{% url 'cultes:editeur' culte.pk %}" data-projection="{% url 'cultes:projection' culte.pk %}">
+  <header class="presentateur-barre">
+    <a class="bouton-lien" href="{% url 'cultes:editeur' culte.pk %}">← Éditeur</a>
+    <strong>{{ culte.titre }}</strong>
+    <span class="presentateur-chrono" data-chrono title="Durée depuis l'ouverture (clic : remettre à zéro)">00:00</span>
+    <button type="button" class="bouton-principal" data-ouvrir-projection>▶ Ouvrir l'écran de projection</button>
+  </header>
+  <section class="presentateur-principal">
+    <div class="presentateur-actuelle">
+      <p class="presentateur-libelle">Diapo <b data-position>1</b> sur {{ diapos|length }} · <span data-nom></span></p>
+      <div class="presentateur-cadre" data-actuelle></div>
+      <div class="presentateur-commandes">
+        <button type="button" class="bouton-secondaire" data-aller="precedente">◀ Précédente</button>
+        <button type="button" class="bouton-principal" data-aller="suivante">Suivante ▶</button>
+        <button type="button" class="bouton-secondaire" data-ecran-bouton="noir" title="Touche B">■ Écran noir</button>
+      </div>
+    </div>
+    <div class="presentateur-suivante">
+      <p class="presentateur-libelle">Suivante</p>
+      <div class="presentateur-cadre" data-suivante></div>
+    </div>
+  </section>
+  <ol class="presentateur-liste" aria-label="Diapos du culte">
+    {% for diapo in diapos %}
+      <li><button type="button" class="vignette" data-diapo data-index="{{ forloop.counter0 }}" data-nom="{{ diapo.nom_groupe }}" title="{{ diapo.nom_groupe }}">
+        <span class="vignette-numero">{{ forloop.counter }}</span>
+        {% include "cultes/_diapo.html" %}
+      </button></li>
+    {% endfor %}
+  </ol>
+</body>
+</html>
