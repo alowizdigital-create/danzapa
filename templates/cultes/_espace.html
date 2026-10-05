@@ -46,53 +46,54 @@
       <div id="diapo-grande" class="diapo diapo-grande"></div>
     </div>
 
-    <div class="proprietes-zone">
-      <div class="proprietes" data-element="" hidden>
-        <h2>Diapo de bienvenue</h2>
-        <p class="aide">{% if peut_modifier %}Le texte se modifie dans l'onglet <strong>Création</strong>.{% else %}Première diapo du culte.{% endif %}</p>
-      </div>
-
-      {% for groupe in groupes %}{% with element=groupe.element %}{% if element %}
-      <div class="proprietes" data-element="{{ element.pk }}" hidden>
-        <h2>{{ element.nom }} <small>{{ element.get_type_display }}{% if element.masque %} · masqué{% endif %}</small></h2>
-        {% if peut_modifier %}
-          <form class="form-proprietes" hx-post="{% url 'cultes:modifier_element' culte.pk element.pk %}" hx-trigger="change" hx-target="#espace" hx-swap="outerHTML">
-            <label>Moment
-              <input name="moment" value="{{ element.moment }}" list="liste-moments" maxlength="100" placeholder="Ex. : Cantique d'entrée">
-            </label>
-            {% if element.type != "chant" %}
-              <label>Titre <input name="titre" value="{{ element.titre }}" maxlength="200"></label>
-              <label class="large">Texte
-                <textarea name="contenu" rows="4">{{ element.contenu }}</textarea>
-                <small>Une ligne vide sépare deux diapos.</small>
-              </label>
-            {% endif %}
-          </form>
-          {% if element.type == "chant" and peut_editer_chants %}
-            <form class="form-proprietes form-chant" hx-post="{% url 'cultes:infos_chant' culte.pk element.chant_id %}" hx-trigger="change" hx-target="#espace" hx-swap="outerHTML">
-              <label>Titre du chant <input name="titre" value="{{ element.chant.titre }}" maxlength="200" required></label>
-              <label>Tags <input name="tags" value="{{ element.chant.tags }}" maxlength="300" placeholder="adoration, louange…"></label>
-              <label>Auteur <input name="auteur" value="{{ element.chant.auteur }}" maxlength="200"></label>
-            </form>
-            {% with nb=element.chant.utilisations.count %}{% if nb > 1 %}<p class="aide">Ce chant est utilisé dans {{ nb }} cultes : une modification s'applique partout.</p>{% endif %}{% endwith %}
-          {% endif %}
-          <div class="actions-element">
-            {% if element.type == "chant" and peut_editer_chants %}
-              <button type="button" class="bouton-principal" data-chant-action="editer" data-chant="{{ element.chant_id }}">✎ Modifier le chant</button>
-            {% endif %}
-            <button type="button" class="bouton-secondaire" data-action="masquer" hx-post="{% url 'cultes:basculer_masque' culte.pk element.pk %}" hx-target="#espace" hx-swap="outerHTML">{% if element.masque %}Afficher{% else %}Masquer{% endif %}</button>
-            <button type="button" class="bouton-secondaire" data-action="monter" hx-post="{% url 'cultes:deplacer_element' culte.pk element.pk %}" hx-vals='{"sens": "haut"}' hx-target="#espace" hx-swap="outerHTML" title="Monter">↑</button>
-            <button type="button" class="bouton-secondaire" data-action="descendre" hx-post="{% url 'cultes:deplacer_element' culte.pk element.pk %}" hx-vals='{"sens": "bas"}' hx-target="#espace" hx-swap="outerHTML" title="Descendre">↓</button>
-            <button type="button" class="bouton-secondaire bouton-retirer" data-action="supprimer" hx-post="{% url 'cultes:supprimer_element' culte.pk element.pk %}" hx-target="#espace" hx-swap="outerHTML"
-                    hx-confirm="Retirer « {{ element.nom }} » du culte ?{% if element.type == 'chant' %} Le chant reste dans la bibliothèque.{% endif %}">Retirer du culte</button>
-          </div>
-        {% elif element.moment %}
-          <p class="aide">Moment : {{ element.moment }}</p>
-        {% endif %}
-      </div>
-      {% endif %}{% endwith %}{% endfor %}
-    </div>
   </section>
+
+  {% comment %}
+    Propriétés de chaque élément : fenêtre ouverte depuis le ruban (⚙ Propriétés)
+    ou par double-clic sur le nom du groupe. Les boutons data-action cachés sont
+    déclenchés par le groupe « Élément du culte » du ruban.
+  {% endcomment %}
+  {% if peut_modifier %}{% for groupe in groupes %}{% with element=groupe.element %}{% if element %}
+  <dialog class="dialogue dlg-proprietes" data-element="{{ element.pk }}" aria-label="Propriétés de {{ element.nom }}">
+    {% if element.type == "chant" and peut_editer_chants %}
+      <form hx-post="{% url 'cultes:infos_chant' culte.pk element.chant_id %}" hx-target="#espace" hx-swap="outerHTML" data-ferme-apres>
+      <input type="hidden" name="hors_edition" value="1">
+    {% else %}
+      <form hx-post="{% url 'cultes:modifier_element' culte.pk element.pk %}" hx-target="#espace" hx-swap="outerHTML" data-ferme-apres>
+    {% endif %}
+      <div class="dialogue-entete">
+        <h2>{{ element.nom }} <small>{{ element.get_type_display }}{% if element.masque %} · masqué{% endif %}</small></h2>
+        <button type="button" class="bouton-lien" data-fermer>✕</button>
+      </div>
+      <label>Moment
+        <input name="moment" value="{{ element.moment }}" list="liste-moments" maxlength="100" placeholder="Ex. : Cantique d'entrée">
+      </label>
+      {% if element.type == "chant" %}
+        {% if peut_editer_chants %}
+          <label>Titre du chant <input name="titre" value="{{ element.chant.titre }}" maxlength="200" required></label>
+          <label>Tags <input name="tags" value="{{ element.chant.tags }}" maxlength="300" placeholder="adoration, louange…"></label>
+          <label>Auteur <input name="auteur" value="{{ element.chant.auteur }}" maxlength="200"></label>
+          {% with nb=element.chant.utilisations.count %}{% if nb > 1 %}<p class="aide">Ce chant est utilisé dans {{ nb }} cultes : une modification s'applique partout.</p>{% endif %}{% endwith %}
+        {% endif %}
+      {% else %}
+        <label>Titre <input name="titre" value="{{ element.titre }}" maxlength="200"></label>
+        <label>Texte
+          <textarea name="contenu" rows="6">{{ element.contenu }}</textarea>
+          <small>Une ligne vide sépare deux diapos.</small>
+        </label>
+      {% endif %}
+      <p class="message message-error" data-erreur hidden></p>
+      <button type="submit" class="bouton-principal">Enregistrer</button>
+    </form>
+    <div hidden>
+      <button type="button" data-action="masquer" hx-post="{% url 'cultes:basculer_masque' culte.pk element.pk %}" hx-target="#espace" hx-swap="outerHTML"></button>
+      <button type="button" data-action="monter" hx-post="{% url 'cultes:deplacer_element' culte.pk element.pk %}" hx-vals='{"sens": "haut"}' hx-target="#espace" hx-swap="outerHTML"></button>
+      <button type="button" data-action="descendre" hx-post="{% url 'cultes:deplacer_element' culte.pk element.pk %}" hx-vals='{"sens": "bas"}' hx-target="#espace" hx-swap="outerHTML"></button>
+      <button type="button" data-action="supprimer" hx-post="{% url 'cultes:supprimer_element' culte.pk element.pk %}" hx-target="#espace" hx-swap="outerHTML"
+              hx-confirm="Retirer « {{ element.nom }} » du culte ?{% if element.type == 'chant' %} Le chant reste dans la bibliothèque.{% endif %}"></button>
+    </div>
+  </dialog>
+  {% endif %}{% endwith %}{% endfor %}{% endif %}
 
   <footer class="barre-etat">
     <span>Diapositive <b data-position>{% if total_diapos %}1{% else %}0{% endif %}</b> sur {{ total_diapos }}</span>

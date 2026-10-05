@@ -276,7 +276,13 @@ def infos_chant(request, pk, chant_pk):
         return HttpResponseBadRequest(premiere_erreur(form))
     form.save()
     chant.mettre_a_jour_recherche()
-    return reponse_espace(request, culte, element.pk, chant.pk)
+    # Fenêtre Propriétés : le moment de l'élément s'enregistre avec le chant.
+    if "moment" in request.POST:
+        element.moment = request.POST["moment"].strip()[: ElementCulte._meta.get_field("moment").max_length]
+        element.save(update_fields=["moment"])
+    # Depuis la fenêtre Propriétés (hors édition), ne pas ouvrir l'édition du chant.
+    edition = None if request.POST.get("hors_edition") else chant.pk
+    return reponse_espace(request, culte, element.pk, edition)
 
 
 @peut_editer_chant

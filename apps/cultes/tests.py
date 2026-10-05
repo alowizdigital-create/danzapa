@@ -332,6 +332,21 @@ class SaisieDesChantsTests(TestCase):
         self.assertEqual((self.chant.titre, self.chant.tags), ("Sans attendre", "entrée, louange"))
         self.assertIn("louange", self.chant.recherche)
 
+    def test_fenetre_proprietes_enregistre_aussi_le_moment(self):
+        self.hx_post(self.url("infos_chant"), {"moment": " Louange ", "titre": "Sans attendre", "tags": "", "auteur": ""})
+        element = self.culte.elements.get(chant=self.chant)
+        self.assertEqual(element.moment, "Louange")
+        reponse = self.hx_post(self.url("infos_chant"), {"titre": "Sans attendre", "hors_edition": "1"})
+        self.assertContains(reponse, 'data-edition=""')
+
+    def test_proprietes_en_fenetre_et_non_sous_la_diapo(self):
+        reponse = self.client.get(reverse("cultes:editeur", args=[self.culte.pk]))
+        self.assertNotContains(reponse, "proprietes-zone")
+        self.assertNotContains(reponse, "{#")
+        self.assertNotContains(reponse, "Retirer du culte</button>\n          </div>")
+        self.assertContains(reponse, 'class="dialogue dlg-proprietes"')
+        self.assertContains(reponse, 'data-cible="proprietes"')
+
     def test_chant_hors_du_culte_introuvable(self):
         autre = Chant.objects.create(titre="Autre")
         piece = DiapoChant.objects.create(chant=autre, ordre=1)

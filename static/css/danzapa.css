@@ -561,30 +561,7 @@ input.titre-culte:hover, input.titre-culte:focus { border-color: var(--bordure);
 .scene { width: 100%; max-width: min(960px, calc((100vh - 330px) * 16 / 9)); min-width: 280px; margin: 0 auto; }
 .diapo-grande { box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2); }
 
-.proprietes-zone { max-width: 960px; width: 100%; margin: 0 auto; }
-.proprietes {
-  background: var(--surface);
-  border: 1px solid var(--bordure);
-  border-radius: var(--rayon);
-  padding: 0.75rem 1rem;
-}
-.proprietes h2 { font-size: 1rem; margin: 0 0 0.5rem; }
-.proprietes h2 small { font-weight: 400; color: var(--texte-doux); font-size: 0.8rem; margin-left: 0.3rem; }
-.form-proprietes { display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; align-items: flex-end; }
-.form-proprietes label { display: flex; flex-direction: column; gap: 0.2rem; font-size: 0.85rem; }
-.form-proprietes label.large { flex-basis: 100%; }
-.form-proprietes label.case { flex-direction: row; align-items: center; gap: 0.4rem; padding-bottom: 0.4rem; }
-.form-proprietes input:not([type=checkbox]), .form-proprietes textarea {
-  font: inherit;
-  padding: 0.4rem 0.5rem;
-  border: 1px solid var(--bordure);
-  border-radius: 4px;
-  min-width: 14rem;
-}
-.form-proprietes textarea { width: 100%; }
-.form-proprietes small, .aide { color: var(--texte-doux); font-size: 0.8rem; }
-.actions-element { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.75rem; }
-.actions-element .bouton-secondaire { padding: 0.35rem 0.75rem; font-size: 0.85rem; }
+.aide { color: var(--texte-doux); font-size: 0.8rem; }
 .bouton-retirer { color: #a4262c; }
 
 .barre-etat {

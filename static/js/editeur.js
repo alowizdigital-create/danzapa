@@ -44,7 +44,6 @@
     if (!vignettes.length) {
       g.className = "diapo diapo-grande diapo-vide";
       g.innerHTML = "";
-      e.querySelectorAll(".proprietes").forEach((p) => (p.hidden = true));
       majRuban(null);
       return;
     }
@@ -75,8 +74,6 @@
     const position = e.querySelector("[data-position]");
     if (position) position.textContent = numero;
 
-    const element = vignette.dataset.element;
-    e.querySelectorAll(".proprietes").forEach((p) => (p.hidden = p.dataset.element !== element));
     numeroCourant = numero;
     majRuban(vignette);
     vignette.scrollIntoView({ block: "nearest" });
@@ -90,6 +87,25 @@
     const sel = window.getSelection();
     sel.removeAllRanges();
     sel.addRange(range);
+  }
+
+  // Propriétés et actions d'un élément du culte (fenêtre .dlg-proprietes de _espace.html).
+  function fenetreProprietes(element) {
+    return element ? espace().querySelector(`.dlg-proprietes[data-element="${element}"]`) : null;
+  }
+
+  function ouvrirProprietes(element) {
+    const fenetre = fenetreProprietes(element);
+    if (!fenetre) return;
+    fenetre.showModal();
+    const champ = fenetre.querySelector("input[name=titre], input[name=moment]");
+    if (champ) champ.focus();
+  }
+
+  function actionElement(element, action) {
+    const fenetre = fenetreProprietes(element);
+    const bouton = fenetre && fenetre.querySelector(`[data-action="${action}"]`);
+    if (bouton) bouton.click();
   }
 
   // État des boutons du ruban selon la diapo sélectionnée et le mode édition.
@@ -412,8 +428,9 @@
       return;
     }
     if (cible.dataset.cible) {
-      const bouton = espace().querySelector(`.proprietes:not([hidden]) [data-action="${cible.dataset.cible}"]`);
-      if (bouton) bouton.click();
+      const active = espace().querySelector(".vignette.active");
+      if (cible.dataset.cible === "proprietes") ouvrirProprietes(active && active.dataset.element);
+      else actionElement(active && active.dataset.element, cible.dataset.cible);
       return;
     }
     if (cible.dataset.chantAction === "editer") {
@@ -449,6 +466,11 @@
   // Double-clic sur une diapo de chant : l'ouvrir en édition (ou, dans la
   // trieuse, revenir en vue normale sur cette diapo).
   document.addEventListener("dblclick", (evt) => {
+    const entete = evt.target.closest(".groupe-entete");
+    if (entete && !edition) {
+      ouvrirProprietes(entete.closest(".groupe").dataset.element);
+      return;
+    }
     const vignette = evt.target.closest(".vignette");
     if (!vignette) return;
     if (vue === "trieuse") {
