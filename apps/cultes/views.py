@@ -17,7 +17,7 @@ from apps.chants.models import Chant, DiapoChant
 from apps.chants.recherche import filtrer, titres_d_abord
 
 from apps.projection import pptx, rendu
-from apps.projection.models import Theme
+from apps.projection.models import POLICES, Theme
 
 from . import diapos
 from .forms import (
@@ -45,6 +45,10 @@ def moments_connus():
     return sorted(moments)
 
 
+# Tailles proposées dans le ruban (comme PowerPoint) ; toute autre valeur peut être saisie.
+TAILLES_PT = [8, 10, 12, 14, 16, 18, 20, 24, 28, 32, 36, 40, 44, 48, 54, 60, 66, 72, 80, 88, 96, 110, 120, 140, 160, 200]
+
+
 def contexte_espace(request, culte, selection=None, edition=None, piece=None):
     """Contexte du fragment #espace.
 
@@ -59,6 +63,8 @@ def contexte_espace(request, culte, selection=None, edition=None, piece=None):
         "peut_editer_chants": request.user.has_perm("chants.change_chant"),
         "culte": culte,
         "theme": theme,
+        "polices": POLICES.items(),
+        "tailles_pt": TAILLES_PT,
         "themes": Theme.objects.all(),
         "groupes": groupes,
         "a_des_elements": any(g.element for g in groupes),
@@ -302,6 +308,10 @@ def enregistrer_diapo(request, pk, chant_pk, piece_pk):
         piece.alignement = donnees["alignement"]
     if donnees.get("echelle"):
         piece.echelle = donnees["echelle"]
+    if "taille" in request.POST:
+        piece.taille = donnees["taille"]  # vide : automatique
+    if "police" in request.POST:
+        piece.police = donnees["police"]
     if "couleur_fond" in request.POST:
         piece.couleur_fond = donnees["couleur_fond"]
     piece.save()
@@ -309,12 +319,17 @@ def enregistrer_diapo(request, pk, chant_pk, piece_pk):
     culte.save(update_fields=["date_modification"])
 
     apercu = diapos.Diapo(
-        diapos.PAROLES, piece.texte.split("\n") if piece.texte else [""], echelle=piece.echelle
+        diapos.PAROLES, piece.texte.split("\n") if piece.texte else [""],
+        echelle=piece.echelle, taille=piece.taille, police=piece.police,
     )
+    taille = rendu.taille_pt(apercu, culte.theme_effectif)
     return JsonResponse(
         {
             "contenu": piece.contenu,
-            "taille": rendu.en_cqw(rendu.taille_pt(apercu, culte.theme_effectif)),
+            "taille": rendu.en_cqw(taille),
+            "taille_pt": round(taille),
+            "taille_choisie": piece.taille,
+            "police": piece.police,
             "alignement": piece.alignement,
             "echelle": piece.echelle,
             "couleur_fond": piece.couleur_fond,
@@ -342,11 +357,13 @@ def ajouter_diapo(request, pk, chant_pk):
         nouvelle.alignement, nouvelle.echelle, nouvelle.couleur_fond = (
             modele.alignement, modele.echelle, modele.couleur_fond,
         )
+        nouvelle.taille, nouvelle.police = modele.taille, modele.police
     elif apres:
         # Une nouvelle diapo garde la mise en page de la précédente.
         nouvelle.alignement, nouvelle.echelle, nouvelle.couleur_fond = (
             apres.alignement, apres.echelle, apres.couleur_fond,
         )
+        nouvelle.taille, nouvelle.police = apres.taille, apres.police
     nouvelle.save()
     position = pieces.index(apres) + 1 if apres else len(pieces)
     pieces.insert(position, nouvelle)

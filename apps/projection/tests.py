@@ -95,6 +95,16 @@ class TailleTests(TestCase):
         diapo = d.Diapo(d.PAROLES, ["court"])
         self.assertEqual(rendu.taille_pt(diapo, self.theme), 20)
 
+    def test_taille_choisie_pour_la_diapo(self):
+        longue = ["Une très longue ligne de paroles qui ne tiendrait jamais sur la diapo"]
+        self.assertEqual(rendu.taille_pt(d.Diapo(d.PAROLES, longue, taille=72), self.theme), 72)
+
+    def test_police_de_la_diapo_pour_l_ajustement(self):
+        ligne = ["Une ligne assez longue pour être réduite automatiquement"]
+        etroite = rendu.taille_pt(d.Diapo(d.PAROLES, ligne, police="Calibri"), self.theme)
+        large = rendu.taille_pt(d.Diapo(d.PAROLES, ligne, police="Verdana"), self.theme)
+        self.assertLess(large, etroite)
+
     def test_conversion_cqw(self):
         self.assertEqual(rendu.en_cqw(96), "10.000cqw")
 
@@ -165,6 +175,14 @@ class ExportTests(TestCase):
         from pptx.enum.text import PP_ALIGN
         self.assertEqual(paragraphes[0].alignment, PP_ALIGN.RIGHT)
         self.assertTrue(DiapoChant.objects.filter(pk=piece.pk).exists())
+
+    def test_taille_et_police_de_la_diapo_exportees(self):
+        piece = self.chant.diapos.first()
+        piece.taille, piece.police = 72, "Georgia"
+        piece.save()
+        diapositive = list(ouvrir(export.exporter(self.culte)).slides)[2]
+        police = [f for f in diapositive.shapes if f.has_text_frame][0].text_frame.paragraphs[0].runs[0].font
+        self.assertEqual((police.name, police.size.pt), ("Georgia", 72))
 
     def test_pas_gras_explicite_exporte(self):
         piece = self.chant.diapos.first()

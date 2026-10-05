@@ -31,6 +31,8 @@ class Diapo:
     html: str = ""
     alignement: str = "centre"
     echelle: int = 100
+    taille: int | None = None  # pt choisis ; None : automatique
+    police: str = ""  # vide : police du thème
     couleur_fond: str = ""
     chant_id: int | None = None
     piece_id: int | None = None  # DiapoChant correspondante
@@ -60,6 +62,8 @@ def diapos_du_chant(element):
                 html=piece.contenu,
                 alignement=piece.alignement,
                 echelle=piece.echelle,
+                taille=piece.taille,
+                police=piece.police,
                 couleur_fond=piece.couleur_fond,
                 chant_id=chant.pk,
                 piece_id=piece.pk,

@@ -75,6 +75,7 @@ class DiapoChant(models.Model):
     GAUCHE, CENTRE, DROITE = "gauche", "centre", "droite"
     ALIGNEMENTS = [(GAUCHE, "Gauche"), (CENTRE, "Centré"), (DROITE, "Droite")]
     ECHELLE_MIN, ECHELLE_MAX = 50, 200
+    TAILLE_MIN, TAILLE_MAX = 8, 200
 
     chant = models.ForeignKey(Chant, on_delete=models.CASCADE, related_name="diapos")
     ordre = models.PositiveIntegerField()
@@ -85,6 +86,13 @@ class DiapoChant(models.Model):
     echelle = models.PositiveSmallIntegerField(
         "taille (%)", default=100, validators=[MinValueValidator(ECHELLE_MIN), MaxValueValidator(ECHELLE_MAX)]
     )
+    # Taille du texte choisie (pt) ; vide : taille du thème, réduite si le texte ne tient pas.
+    taille = models.PositiveSmallIntegerField(
+        "taille du texte (pt)", null=True, blank=True,
+        validators=[MinValueValidator(TAILLE_MIN), MaxValueValidator(TAILLE_MAX)],
+    )
+    # Vide : police du thème. Noms de apps/projection/models.py (POLICES).
+    police = models.CharField(max_length=40, blank=True)
     couleur_fond = models.CharField(
         "couleur de fond", max_length=7, blank=True, validators=[couleur_hex], help_text="Vide : couleur du thème."
     )
@@ -106,4 +114,10 @@ class DiapoChant(models.Model):
         champs = self.champs_depuis_html(self.contenu)
         self.contenu, self.texte = champs["contenu"], champs["texte"]
         self.echelle = min(self.ECHELLE_MAX, max(self.ECHELLE_MIN, self.echelle or 100))
+        if self.taille:
+            self.taille = min(self.TAILLE_MAX, max(self.TAILLE_MIN, self.taille))
+        from apps.projection.models import POLICES
+
+        if self.police not in POLICES:
+            self.police = ""
         super().save(*args, **kwargs)

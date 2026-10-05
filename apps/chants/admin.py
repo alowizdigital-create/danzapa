@@ -6,7 +6,7 @@ from .models import Chant, DiapoChant
 class DiapoInline(admin.TabularInline):
     model = DiapoChant
     extra = 0
-    fields = ("ordre", "texte", "alignement", "echelle", "couleur_fond")
+    fields = ("ordre", "texte", "alignement", "taille", "police", "couleur_fond")
     readonly_fields = ("texte",)
 
 

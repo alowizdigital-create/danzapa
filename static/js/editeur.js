@@ -58,7 +58,9 @@
     g.dataset.piece = vignette.dataset.piece || "";
     g.dataset.chant = vignette.dataset.chant || "";
     g.dataset.alignement = source.dataset.alignement || "centre";
-    g.dataset.echelle = source.dataset.echelle || "100";
+    g.dataset.taille = source.dataset.taille || "";
+    g.dataset.taillePt = source.dataset.taillePt || "";
+    g.dataset.police = source.dataset.police || "";
     g.dataset.fond = source.dataset.fond || "";
 
     const editable = edition && g.dataset.piece && g.dataset.chant === edition;
@@ -115,11 +117,12 @@
     const surPiece = !!(edition && vignette && vignette.dataset.piece && chant === edition);
     document.querySelectorAll("[data-cible]").forEach((b) => (b.disabled = !element || !!edition));
     document.querySelectorAll("[data-en-edition]").forEach((b) => {
-      const pourDiapo = b.matches("[data-format], [data-diapo-reglage], [data-couleur-texte], [data-couleur-fond]")
+      const pourDiapo = b.matches("[data-format], [data-diapo-reglage], [data-couleur-texte], [data-couleur-fond], [data-taille-diapo], [data-police-diapo]")
         || ["dupliquer", "haut", "bas", "supprimer"].includes(b.dataset.diapoAction);
       b.disabled = !edition || (pourDiapo && !surPiece);
     });
     document.querySelectorAll('[data-chant-action="editer"][data-hors-edition]').forEach((b) => (b.disabled = !!edition || !chant));
+    afficherReglages();
     document.querySelectorAll("[data-couleur-texte], [data-couleur-fond]").forEach((i) => {
       i.closest("label").classList.toggle("desactive", i.disabled);
     });
@@ -237,7 +240,16 @@
         v.dataset.alignement = reglages.alignement;
         v.querySelector(".diapo-contenu").className = "diapo-contenu aligner-" + reglages.alignement;
       }
-      if (reglages.echelle) v.dataset.echelle = reglages.echelle;
+      if (reglages.taille_pt !== undefined) {
+        v.dataset.taillePt = reglages.taille_pt;
+        v.dataset.taille = reglages.taille_choisie || "";
+      }
+      if (reglages.police !== undefined) {
+        v.dataset.police = reglages.police;
+        const pile = pileDe(reglages.police);
+        if (pile) v.style.setProperty("--police", pile);
+        else v.style.removeProperty("--police");
+      }
       if (reglages.couleur_fond !== undefined) {
         v.dataset.fond = reglages.couleur_fond;
         v.style.background = reglages.couleur_fond || "";
@@ -261,7 +273,8 @@
     const corps = new FormData();
     corps.append("contenu", zone.innerHTML);
     corps.append("alignement", g.dataset.alignement || "centre");
-    corps.append("echelle", g.dataset.echelle || "100");
+    corps.append("taille", g.dataset.taille || "");
+    corps.append("police", g.dataset.police || "");
     corps.append("couleur_fond", g.dataset.fond || "");
     return { corps, chant: g.dataset.chant, piece: g.dataset.piece };
   }
@@ -286,7 +299,11 @@
         const d = await reponse.json();
         majVignette(envoi.piece, d.contenu, d);
         const g = grande();
-        if (g && g.dataset.piece === envoi.piece) g.style.setProperty("--taille", d.taille);
+        if (g && g.dataset.piece === envoi.piece) {
+          g.style.setProperty("--taille", d.taille);
+          g.dataset.taillePt = d.taille_pt;
+          afficherReglages();
+        }
         indiquerEnregistre();
       })
       .catch((erreur) => {
@@ -301,8 +318,22 @@
     const g = grande();
     if (!zoneEditable()) return;
     if (reglage === "plus" || reglage === "moins") {
-      const echelle = Number(g.dataset.echelle || 100) + (reglage === "plus" ? 10 : -10);
-      g.dataset.echelle = String(Math.min(200, Math.max(50, echelle)));
+      // Taille suivante / précédente de la liste du ruban, à partir de la taille affichée.
+      const actuelle = Number(g.dataset.taillePt) || 54;
+      const tailles = taillesProposees();
+      const suivante = reglage === "plus"
+        ? tailles.find((t) => t > actuelle) || tailles[tailles.length - 1]
+        : [...tailles].reverse().find((t) => t < actuelle) || tailles[0];
+      fixerTaille(g, suivante);
+    } else if (reglage === "taille") {
+      const n = parseInt(valeur, 10);
+      if (Number.isNaN(n)) g.dataset.taille = ""; // automatique : le serveur renvoie la taille
+      else fixerTaille(g, Math.min(200, Math.max(8, n)));
+    } else if (reglage === "police") {
+      g.dataset.police = valeur;
+      const pile = pileDe(valeur);
+      if (pile) g.style.setProperty("--police", pile);
+      else g.style.removeProperty("--police");
     } else if (["gauche", "centre", "droite"].includes(reglage)) {
       g.dataset.alignement = reglage;
       g.querySelector(".diapo-contenu").classList.remove("aligner-gauche", "aligner-centre", "aligner-droite");
@@ -314,9 +345,50 @@
       g.dataset.fond = "";
       g.style.background = "";
     }
-    majVignette(g.dataset.piece, undefined, { alignement: g.dataset.alignement, couleur_fond: g.dataset.fond });
+    majVignette(g.dataset.piece, undefined, {
+      alignement: g.dataset.alignement,
+      couleur_fond: g.dataset.fond,
+      police: g.dataset.police || "",
+      taille: g.style.getPropertyValue("--taille") || undefined,
+      taille_pt: g.dataset.taillePt,
+      taille_choisie: g.dataset.taille,
+    });
+    afficherReglages();
     modifie = true;
     sauverMaintenant();
+  }
+
+  function fixerTaille(g, points) {
+    g.dataset.taille = String(points);
+    g.dataset.taillePt = String(points);
+    g.style.setProperty("--taille", (points * 100 / 960).toFixed(3) + "cqw"); // comme rendu.en_cqw
+  }
+
+  function taillesProposees() {
+    return Array.from(document.querySelectorAll("#tailles-pt option")).map((o) => Number(o.value));
+  }
+
+  function pileDe(police) {
+    const option = police && document.querySelector(`[data-police-diapo] option[value="${CSS.escape(police)}"]`);
+    return option ? option.dataset.pile : "";
+  }
+
+  // Le ruban montre la police, la taille et l'alignement de la diapo affichée.
+  function afficherReglages() {
+    const g = grande();
+    const avecTexte = !!(g && g.dataset.piece);
+    const champTaille = document.querySelector("[data-taille-diapo]");
+    if (champTaille && document.activeElement !== champTaille) {
+      champTaille.value = avecTexte ? g.dataset.taillePt || "" : "";
+      champTaille.classList.toggle("taille-auto", avecTexte && !g.dataset.taille);
+    }
+    const choixPolice = document.querySelector("[data-police-diapo]");
+    if (choixPolice) choixPolice.value = avecTexte ? g.dataset.police || "" : "";
+    document.querySelectorAll('[data-diapo-reglage="gauche"], [data-diapo-reglage="centre"], [data-diapo-reglage="droite"]').forEach((b) => {
+      const actif = avecTexte && (g.dataset.alignement || "centre") === b.dataset.diapoReglage;
+      b.classList.toggle("outil-actif", actif);
+      b.setAttribute("aria-pressed", actif ? "true" : "false");
+    });
   }
 
   async function actionDiapo(action) {
@@ -384,6 +456,22 @@
   document.addEventListener("input", (evt) => {
     if (evt.target.matches && evt.target.matches("[data-couleur-texte]")) formater("foreColor", evt.target.value);
     if (evt.target.matches && evt.target.matches("[data-couleur-fond]")) reglerDiapo("fond", evt.target.value);
+  });
+
+  // Taille saisie (validée par Entrée ou en quittant le champ) et police choisie.
+  document.addEventListener("change", (evt) => {
+    if (!evt.target.matches) return;
+    if (evt.target.matches("[data-taille-diapo]")) reglerDiapo("taille", evt.target.value);
+    if (evt.target.matches("[data-police-diapo]")) reglerDiapo("police", evt.target.value);
+  });
+  document.addEventListener("keydown", (evt) => {
+    if (evt.key === "Enter" && evt.target.matches && evt.target.matches("[data-taille-diapo]")) {
+      evt.preventDefault();
+      // Retour dans la diapo : la perte du focus déclenche « change », donc l'enregistrement.
+      const zone = zoneEditable();
+      if (zone) placerCurseurAlaFin(zone);
+      else evt.target.blur();
+    }
   });
 
   // Dernière chance d'envoyer une saisie en cours si on quitte la page.

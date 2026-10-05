@@ -7,7 +7,7 @@ vignette, la grande diapo et le .pptx gardent les mêmes proportions.
 
 from apps.cultes import diapos as d
 
-from .models import CHASSES
+from .models import CHASSES, POLICES
 
 LARGEUR_PT = 960
 HAUTEUR_PT = 540
@@ -54,6 +54,7 @@ def en_majuscules(diapo, theme):
 def chasse_pour(diapo, theme):
     """Largeur moyenne d'un caractère de la diapo, en proportion de la taille."""
     police = theme.police if diapo.type in (d.PAROLES, d.TEXTE) else theme.police_titres
+    police = getattr(diapo, "police", "") or police
     chasse = CHASSES.get(police, 0.6)
     if diapo.type == d.BIENVENUE:
         return chasse * FACTEUR_BIENVENUE
@@ -63,7 +64,10 @@ def chasse_pour(diapo, theme):
 
 
 def taille_pt(diapo, theme):
-    """Taille retenue : la taille du thème, réduite si le texte ne tient pas."""
+    """Taille retenue : celle choisie pour la diapo, sinon la taille du thème
+    réduite si le texte ne tient pas."""
+    if getattr(diapo, "taille", None):
+        return float(diapo.taille)
     taille = taille_nominale(diapo, theme)
     largeur, hauteur = zone_texte(diapo)
     lignes = diapo.lignes or [""]
@@ -79,8 +83,11 @@ def taille_pt(diapo, theme):
 
 
 def annoter(groupes, theme):
-    """Ajoute à chaque diapo la taille calculée, pour l'aperçu."""
+    """Ajoute à chaque diapo la taille calculée (et la police choisie), pour l'aperçu."""
     for groupe in groupes:
         for diapo in groupe.diapos:
-            diapo.taille_cqw = en_cqw(taille_pt(diapo, theme))
+            taille = taille_pt(diapo, theme)
+            diapo.taille_cqw = en_cqw(taille)
+            diapo.taille_affichee = round(taille)
+            diapo.pile_police = POLICES.get(diapo.police, "")
     return groupes

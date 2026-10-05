@@ -44,4 +44,6 @@ class DiapoChantForm(forms.Form):
     contenu = forms.CharField(required=False, max_length=20000, strip=False)
     alignement = forms.ChoiceField(choices=[("gauche", ""), ("centre", ""), ("droite", "")], required=False)
     echelle = forms.IntegerField(required=False, min_value=50, max_value=200)
+    taille = forms.IntegerField(required=False, min_value=8, max_value=200)
+    police = forms.CharField(required=False, max_length=40)
     couleur_fond = forms.RegexField(regex=r"^(#[0-9a-fA-F]{6})?$", required=False)

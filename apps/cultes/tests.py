@@ -296,6 +296,30 @@ class SaisieDesChantsTests(TestCase):
         self.chant.refresh_from_db()
         self.assertIn("je veux tendre", self.chant.recherche)
 
+    def test_taille_et_police_de_la_diapo(self):
+        piece = self.pieces[0]
+        url = self.url("enregistrer_diapo", piece.pk)
+        donnees = json.loads(self.client.post(url, {"taille": "72", "police": "Georgia"}).content)
+        self.assertEqual((donnees["taille_pt"], donnees["taille_choisie"], donnees["police"]), (72, 72, "Georgia"))
+        piece.refresh_from_db()
+        self.assertEqual((piece.taille, piece.police), (72, "Georgia"))
+        editeur = self.client.get(reverse("cultes:editeur", args=[self.culte.pk])).content.decode()
+        self.assertIn('data-taille="72" data-taille-pt="72" data-police="Georgia"', editeur)
+        self.assertIn("--police: Georgia,", editeur)
+        # Vide : retour à la taille automatique et à la police du thème.
+        donnees = json.loads(self.client.post(url, {"taille": "", "police": ""}).content)
+        self.assertIsNone(donnees["taille_choisie"])
+        self.assertGreater(donnees["taille_pt"], 0)
+        piece.refresh_from_db()
+        self.assertEqual((piece.taille, piece.police), (None, ""))
+        self.assertEqual(self.client.post(url, {"taille": "500"}).status_code, 400)
+
+    def test_police_inconnue_ignoree(self):
+        piece = self.pieces[0]
+        piece.police, piece.taille = "Comic<script>", 3
+        piece.save()
+        self.assertEqual((piece.police, piece.taille), ("", 8))
+
     def test_reglages_invalides_refuses(self):
         reponse = self.client.post(self.url("enregistrer_diapo", self.pieces[0].pk), {"couleur_fond": "red;x"})
         self.assertEqual(reponse.status_code, 400)

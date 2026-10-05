@@ -780,3 +780,19 @@ body:not(.mode-edition) .cache-hors-edition { display: none; }
   line-height: 1.4;
 }
 .alerte-serveur code { background: rgba(255, 255, 255, 0.2); padding: 0 0.25rem; border-radius: 3px; }
+
+/* Ruban, groupe Police : police et taille (pt) de la diapo affichée. */
+.outils-police { display: flex; flex-direction: column; gap: 0.25rem; margin-right: 0.3rem; }
+.outils-police select, .outils-police input {
+  font: inherit;
+  font-size: 0.85rem;
+  padding: 0.2rem 0.3rem;
+  border: 1px solid var(--bordure);
+  border-radius: 4px;
+  background: var(--surface);
+}
+.outils-police select { width: 11rem; }
+.outils-police input { width: 4.5rem; }
+.outils-police input.taille-auto { color: var(--texte-doux); font-style: italic; }
+.outils-police :disabled { opacity: 0.5; }
+.outil-actif { background: var(--accent-clair, #fde7e0); box-shadow: inset 0 0 0 1px var(--accent); }

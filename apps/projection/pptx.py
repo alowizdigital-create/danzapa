@@ -76,7 +76,7 @@ class Exporteur:
         elif diapo.type == d.TITRE:
             self.texte(diapositive, diapo, police=self.theme.police_titres, gras=self.theme.gras)
         else:
-            self.texte(diapositive, diapo, police=self.theme.police, gras=self.theme.gras)
+            self.texte(diapositive, diapo, police=diapo.police or self.theme.police, gras=self.theme.gras)
 
         if diapo.masque:
             # Diapo masquée de PowerPoint : dans le fichier, pas en projection.
