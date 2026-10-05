@@ -259,12 +259,41 @@ class BasePostgresqlTests(TestCase):
 
 
 class DockerComposeTests(TestCase):
-    def test_base_postgresql_integree_et_volumes_nommes(self):
+    def test_sqlite_dans_un_volume_nomme(self):
         from django.conf import settings
 
         contenu = (settings.BASE_DIR / "docker-compose.yml").read_text(encoding="utf-8")
-        self.assertIn("image: postgres:", contenu)
-        self.assertIn("DATABASE_URL: postgresql://danzapa:", contenu)
-        self.assertIn("danzapa-postgres:/var/lib/postgresql/data", contenu)
-        self.assertIn("danzapa-data:/data", contenu)
+        self.assertNotIn("DATABASE_URL", contenu)  # SQLite dans /data
+        self.assertIn("- danzapa-data:/data", contenu)
+        self.assertIn("volumes:\n  danzapa-data:", contenu)
         self.assertNotIn("ports:", contenu)  # Dokploy relie le domaine, pas de conflit de port
+
+
+class SansConnexionTests(TestCase):
+    def test_acces_direct_avec_le_compte_administrateur(self):
+        from django.test import override_settings
+
+        from apps.cultes.models import Culte
+
+        with override_settings(CONNEXION_DESACTIVEE=True):
+            reponse = self.client.get(reverse("accueil"))
+            self.assertEqual(reponse.status_code, 200)
+            self.assertNotContains(reponse, "Déconnexion")
+            admin = Utilisateur.objects.get(username="admin")
+            self.assertTrue(admin.is_superuser)
+            self.assertFalse(admin.has_usable_password())
+            self.assertRedirects(self.client.get(reverse("comptes:connexion")), reverse("accueil"))
+            reponse = self.client.post(reverse("cultes:creation"), {"date": "2026-10-11", "titre": "Culte test"})
+            culte = Culte.objects.get(titre="Culte test")
+            self.assertEqual(culte.cree_par, admin)
+            for nom in ("cultes:editeur", "cultes:export_pptx"):
+                self.assertEqual(self.client.get(reverse(nom, args=[culte.pk])).status_code, 200)
+        self.assertEqual(Utilisateur.objects.count(), 1)
+
+    def test_superuser_existant_reutilise(self):
+        from django.test import override_settings
+
+        Utilisateur.objects.create_superuser("pasteur", password="x")
+        with override_settings(CONNEXION_DESACTIVEE=True):
+            self.assertContains(self.client.get(reverse("accueil")), "PA")
+        self.assertFalse(Utilisateur.objects.filter(username="admin").exists())

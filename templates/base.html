@@ -13,7 +13,7 @@
   <div class="alerte-serveur" role="alert">
     ⚠ <strong>Les données ne sont pas enregistrées durablement</strong> : aucun volume n'est monté sur <code>/data</code>.
     Chants, cultes et mots de passe seront <strong>perdus au prochain déploiement</strong>.
-    Déployer avec <code>docker-compose.yml</code> (service Compose dans Dokploy, voir DEPLOIEMENT.md) : la base PostgreSQL intégrée conserve tout.
+    Déployer avec <code>docker-compose.yml</code> (service Compose dans Dokploy, voir DEPLOIEMENT.md) : son volume conserve tout.
   </div>
   {% endif %}
   {% if user.is_authenticated %}
@@ -24,11 +24,13 @@
     </nav>
     <div class="barre-titre-droite">
       {% if user.is_staff %}<a class="bouton-lien" href="{% url 'admin:index' %}">Administration</a>{% endif %}
+      {% if not connexion_desactivee %}
       <a class="bouton-lien" href="{% url 'comptes:mot_de_passe' %}">Mot de passe</a>
       <form method="post" action="{% url 'comptes:deconnexion' %}">
         {% csrf_token %}
         <button type="submit" class="bouton-lien">Déconnexion</button>
       </form>
+      {% endif %}
       <span class="avatar" title="{{ user.get_full_name|default:user.username }} · {{ user.role }}">{{ user.username|slice:":2"|upper }}</span>
     </div>
   </header>

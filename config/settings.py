@@ -7,6 +7,7 @@ d'environnement (voir `.env.example`), avec pour valeurs par défaut celles de
 
 import os
 import secrets
+import sys
 import time
 from pathlib import Path
 from urllib.parse import unquote, urlsplit
@@ -122,6 +123,7 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "apps.comptes.middleware.ConnexionAutomatique",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
@@ -203,6 +205,11 @@ AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
+
+# Temporaire : accès sans connexion, avec le compte administrateur
+# (apps/comptes/middleware.py). Réglé dans config/production.env.
+# Les tests vérifient toujours le fonctionnement avec connexion.
+CONNEXION_DESACTIVEE = env_bool("DANZAPA_SANS_CONNEXION", False) and sys.argv[1:2] != ["test"]
 
 LOGIN_URL = "comptes:connexion"
 LOGIN_REDIRECT_URL = "accueil"

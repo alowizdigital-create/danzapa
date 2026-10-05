@@ -1,50 +1,27 @@
-# Danzapa complet : l'application (web) et sa base PostgreSQL (db).
+# Danzapa : l'application Django, avec sa base SQLite dans un volume.
 #
 # Dokploy : Create Service → Compose, ce fichier (voir DEPLOIEMENT.md).
-# Les volumes nommés en bas du fichier sont créés au premier déploiement puis
-# conservés à chaque redéploiement : comptes, mots de passe, chants et cultes
-# ne sont plus jamais perdus. Rien à créer ni à configurer à part.
+# Le volume nommé « danzapa-data » (en bas du fichier) est créé au premier
+# déploiement puis conservé à chaque redéploiement : il contient la base
+# /data/db.sqlite3 (chants, cultes, comptes), les images des thèmes et la clé
+# secrète. Rien à configurer à part.
 #
 # Test sur un ordinateur :
 #   docker compose -f docker-compose.yml -f docker-compose.local.yml up --build
 #   → http://localhost:8000
 services:
-  db:
-    image: postgres:16-alpine
-    restart: unless-stopped
-    environment:
-      POSTGRES_DB: danzapa
-      POSTGRES_USER: danzapa
-      # Mot de passe interne : la base n'est joignable que par « web » (aucun
-      # port publié). Pour le personnaliser, définir POSTGRES_PASSWORD dans
-      # l'onglet Environment de Dokploy AVANT le premier déploiement.
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-danzapa-interne}
-    volumes:
-      - danzapa-postgres:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U danzapa -d danzapa"]
-      interval: 5s
-      timeout: 5s
-      retries: 20
-
   web:
     build: .
     restart: unless-stopped
-    depends_on:
-      db:
-        condition: service_healthy
     # Variables de l'onglet Environment de Dokploy (fichier .env), facultatives.
     env_file:
       - path: .env
         required: false
-    environment:
-      DATABASE_URL: postgresql://danzapa:${POSTGRES_PASSWORD:-danzapa-interne}@db:5432/danzapa
     volumes:
-      - danzapa-data:/data   # images des thèmes, clé secrète, sauvegardes
+      - danzapa-data:/data
     # Pas de « ports » : Dokploy relie le domaine au port 8000 du service web.
     expose:
       - "8000"
 
 volumes:
-  danzapa-postgres:
   danzapa-data:

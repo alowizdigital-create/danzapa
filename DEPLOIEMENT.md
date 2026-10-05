@@ -2,14 +2,14 @@
 
 Ce guide met Danzapa en ligne sur un VPS qui fait déjà tourner **Dokploy**, à l'adresse `https://danzapa.zweey.com`.
 
-Le fichier [`docker-compose.yml`](docker-compose.yml) du dépôt décrit Danzapa au complet, **base de données comprise** :
+Le fichier [`docker-compose.yml`](docker-compose.yml) du dépôt décrit Danzapa : un service `web` (Django servi par Gunicorn, CSS/JS par WhiteNoise) et un volume nommé **`danzapa-data`**, monté sur `/data`. Ce volume contient :
 
-| Service | Rôle | Données conservées (volume nommé) |
-|---|---|---|
-| `web` | Django, servi par Gunicorn (CSS/JS par WhiteNoise) | `danzapa-data` : images des thèmes, clé secrète, sauvegardes |
-| `db` | PostgreSQL 16, joignable seulement par `web` | `danzapa-postgres` : comptes, mots de passe, chants, cultes |
+- la base de données **SQLite** `/data/db.sqlite3` (chants, cultes, comptes) ;
+- les images des thèmes ;
+- la clé secrète ;
+- les sauvegardes.
 
-Dokploy crée les deux volumes au premier déploiement et **les garde à chaque redéploiement**. Il n'y a ni base à créer ni volume à ajouter à la main. Au démarrage, `web` attend la base, applique les migrations et crée le premier administrateur. Dokploy s'occupe du nom de domaine et du certificat HTTPS.
+Dokploy crée le volume au premier déploiement et **le garde à chaque redéploiement**. Il n'y a rien à ajouter à la main. Au démarrage, `web` applique les migrations et crée le premier administrateur. Dokploy s'occupe du nom de domaine et du certificat HTTPS.
 
 > Les libellés exacts de Dokploy peuvent varier légèrement selon la version.
 
@@ -63,17 +63,15 @@ Pour changer un réglage, modifiez le fichier sur GitHub (icône crayon), valide
 - La **clé secrète** est générée au premier démarrage et conservée dans le volume `danzapa-data`.
 - Le **mot de passe** du premier administrateur est généré et affiché une seule fois dans les logs (étape 6).
 
+### Accès sans connexion (temporaire)
+
+Pour l'instant, `config/production.env` contient `DANZAPA_SANS_CONNEXION=true`. Tout le monde arrive directement dans l'application, sans page de connexion, avec le compte administrateur.
+
+**Attention** : toute personne qui connaît l'adresse du site peut alors modifier ou supprimer les chants et les cultes. Pour réactiver la connexion, mettez `DANZAPA_SANS_CONNEXION=false` dans ce fichier (ou supprimez la ligne), puis cliquez sur **Deploy**. Les données ne changent pas.
+
 ### L'onglet Environment (facultatif)
 
-Les variables de l'onglet **Environment** du service Compose sont prioritaires sur le fichier. Les secrets vont ici, jamais dans le dépôt. Rien n'est obligatoire. La plus utile :
-
-```env
-POSTGRES_PASSWORD=une-longue-phrase-de-passe
-```
-
-C'est le mot de passe interne de la base PostgreSQL. Sans lui, la valeur par défaut est utilisée, ce qui reste acceptable puisque la base n'est pas exposée sur internet. Il est **pris en compte seulement au tout premier déploiement**, quand la base est créée : choisissez-le avant de cliquer sur Deploy, puis ne le changez plus. Si vous le changez après coup, l'application ne peut plus se connecter (voir Dépannage).
-
-Autres variables possibles : `DJANGO_SUPERUSER_PASSWORD`, `DJANGO_SECRET_KEY`, et celles de [`.env.example`](.env.example).
+Les variables de l'onglet **Environment** du service Compose sont prioritaires sur le fichier. Les secrets vont ici, jamais dans le dépôt. Rien n'est obligatoire. Variables possibles : `DJANGO_SUPERUSER_PASSWORD`, `DJANGO_SECRET_KEY`, et celles de [`.env.example`](.env.example).
 
 ## 5. Domaine et HTTPS
 
@@ -91,7 +89,6 @@ Dokploy fait la redirection HTTP → HTTPS et transmet l'en-tête `X-Forwarded-P
 
 1. Cliquez sur **Deploy** et suivez l'onglet **Deployments**. La construction prend 1 à 3 minutes. Dans l'onglet **Logs**, choisissez le service `web`. Vous devez voir :
    ```
-   Base PostgreSQL prête : comptes, chants et cultes sont conservés entre les déploiements.
    Administrateur « admin » créé.
    ============================================================
      Créé le 05/10/2026 09:00
@@ -100,8 +97,8 @@ Dokploy fait la redirection HTTP → HTTPS et transmet l'en-tête `X-Forwarded-P
    ============================================================
    Listening at: http://0.0.0.0:8000
    ```
-   Notez ce mot de passe : il n'est affiché **qu'une seule fois**, au tout premier démarrage. Les déploiements suivants ne le réaffichent pas, car le compte existe déjà dans la base.
-2. Ouvrez `https://danzapa.zweey.com` et connectez-vous avec `admin` et le mot de passe provisoire. Changez-le tout de suite (**Mot de passe**, en haut à droite). Il est enregistré dans la base PostgreSQL et reste valable après chaque redéploiement.
+   Notez ce mot de passe : il n'est affiché **qu'une seule fois**, au tout premier démarrage. Il servira quand la connexion sera réactivée. Les déploiements suivants ne le réaffichent pas, car le compte existe déjà dans la base.
+2. Ouvrez `https://danzapa.zweey.com`. Avec l'accès sans connexion, l'application s'ouvre directement. Sinon, connectez-vous avec `admin` et le mot de passe provisoire, puis changez-le (**Mot de passe**, en haut à droite). Il est enregistré dans la base, dans le volume, et reste valable après chaque redéploiement.
 3. Créez les comptes de l'équipe : **Administration** (en haut à droite) → **Utilisateurs → Ajouter**. Choisissez ensuite le **groupe** de chacun :
    - **Éditeur** : prépare les cultes et gère les chants ;
    - **Lecteur** : consulte, exporte et projette ;
@@ -126,15 +123,15 @@ Pour vérifier que l'application répond, ouvrez `https://danzapa.zweey.com/sant
 
 ## 7. Mettre à jour
 
-À chaque nouvelle version poussée sur `main`, cliquez sur **Deploy** dans Dokploy. L'image `web` est reconstruite et les migrations s'appliquent toutes seules. Les deux volumes, donc toutes les données, sont conservés.
+À chaque nouvelle version poussée sur `main`, cliquez sur **Deploy** dans Dokploy. L'image `web` est reconstruite et les migrations s'appliquent toutes seules. Le volume `danzapa-data`, donc toutes les données, est conservé.
 
 Pour automatiser le déploiement, activez **Autodeploy** (Dokploy relié à GitHub). Vous pouvez aussi copier l'URL du **webhook** de l'onglet Deployments dans GitHub (**Settings → Webhooks → Add webhook**, type `application/json`, évènement *push*).
 
-> Ne lancez jamais `docker compose down -v` et ne supprimez pas les volumes `danzapa-postgres` / `danzapa-data` : c'est là que sont les données. Supprimer le service Compose dans Dokploy peut aussi supprimer ses volumes ; faites une sauvegarde avant.
+> Ne lancez jamais `docker compose down -v` et ne supprimez pas le volume `danzapa-data` : c'est là que sont les données. Supprimer le service Compose dans Dokploy peut aussi supprimer ses volumes ; faites une sauvegarde avant.
 
 ## 8. Sauvegardes
 
-Dans le conteneur `web`, la commande suivante crée `/data/sauvegardes/danzapa-AAAAMMJJ-HHMMSS.tar.gz`. L'archive contient `base.sql` (export complet de PostgreSQL) et les images des thèmes. Les 14 dernières sont gardées.
+Dans le conteneur `web`, la commande suivante crée `/data/sauvegardes/danzapa-AAAAMMJJ-HHMMSS.tar.gz`. L'archive contient `db.sqlite3` (copie cohérente de la base, même pendant l'utilisation) et les images des thèmes. Les 14 dernières sont gardées.
 
 ```bash
 python manage.py sauvegarde
@@ -148,11 +145,11 @@ python manage.py sauvegarde
   ```bash
   docker cp $(docker ps -qf "name=danzapa.*-web-" | head -1):/data/sauvegardes ./sauvegardes-danzapa
   ```
-- **Restaurer** une archive : extrayez-la (`tar xzf danzapa-….tar.gz`), puis rechargez la base. Le fichier `base.sql` remplace les tables existantes :
+- **Restaurer** une archive : extrayez-la (`tar xzf danzapa-….tar.gz`), recopiez la base et les images dans le conteneur, puis redémarrez-le :
   ```bash
-  docker exec -i $(docker ps -qf "name=danzapa.*-web-" | head -1) sh -c 'psql "$DATABASE_URL"' < base.sql
+  W=$(docker ps -qf "name=danzapa.*-web-" | head -1)
+  docker cp db.sqlite3 $W:/data/db.sqlite3 && docker cp media/. $W:/data/media/ && docker restart $W
   ```
-  Recopiez ensuite les images si besoin : `docker cp media/. <conteneur web>:/data/media/`.
 
 ## 9. Dépannage
 
@@ -161,11 +158,14 @@ python manage.py sauvegarde
 | **Bad Request (400)** | Le domaine n'est pas dans `DJANGO_ALLOWED_HOSTS` | Corriger `config/production.env`, redéployer |
 | **Erreur CSRF (403)** à la connexion | Le site est ouvert par une adresse différente de `DJANGO_ALLOWED_HOSTS`, ou sans HTTPS | Ouvrir `https://` + le sous-domaine ; si besoin, définir `DJANGO_CSRF_TRUSTED_ORIGINS=https://danzapa.zweey.com` |
 | **Bad Gateway (502)** ou **404** de Traefik | Domaine rattaché au mauvais service ou au mauvais port | Domains : Service Name `web`, Container Port `8000` ; lire les logs de `web` |
-| Logs de `web` : « En attente de la base PostgreSQL… » puis « injoignable » | Le service `db` ne démarre pas | Lire les logs du service `db` |
-| Logs : « password authentication failed » | `POSTGRES_PASSWORD` modifié après le premier déploiement | Remettre l'ancienne valeur, ou retirer la variable si la base a été créée sans elle |
+| Bandeau rouge « données pas enregistrées durablement » | Déployé comme Application, sans le volume | Déployer en service Compose (étapes 2 et 3) |
 | « Mot de passe incorrect » pour `admin` | Faute de frappe, ou ancien mot de passe provisoire | Section « Mot de passe incorrect ou oublié » |
 | Le domaine affiche encore l'ancienne version | L'ancienne Application occupe toujours le domaine | Étape 2 |
 | Pas de certificat HTTPS | Le DNS ne pointe pas encore vers le VPS | Attendre la propagation, puis régénérer le certificat |
+
+## Passer à PostgreSQL plus tard
+
+Danzapa sait déjà utiliser PostgreSQL : il suffit de lui donner une variable `DATABASE_URL=postgresql://utilisateur:motdepasse@hôte:5432/base`. Le plus simple sera d'ajouter un service `db` (image `postgres:16-alpine`, avec son propre volume) dans `docker-compose.yml`. Les données SQLite se transfèrent avec `python manage.py dumpdata` puis `loaddata`.
 
 ## Tester sur votre ordinateur
 

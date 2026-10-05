@@ -1,6 +1,6 @@
 # Image de production de Danzapa (Django + Gunicorn + WhiteNoise).
-# Lancée par docker-compose.yml avec sa base PostgreSQL (service « db ») ;
-# images des thèmes et clé secrète : volume sur /data.
+# Lancée par docker-compose.yml. Données persistantes (base SQLite, images des
+# thèmes, clé secrète) : volume nommé sur /data.
 FROM python:3.12-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -12,11 +12,6 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PORT=8000
 
 WORKDIR /app
-
-# pg_dump pour « python manage.py sauvegarde » avec PostgreSQL.
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends postgresql-client \
-    && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
 RUN pip install -r requirements.txt
