@@ -201,3 +201,24 @@ class PremierAdminTests(TestCase):
         admin.refresh_from_db()
         self.assertTrue(admin.check_password("Nouveau-2026"))
         self.assertIn("remplacé", sortie)
+
+
+class AlerteVolumeTests(TestCase):
+    def test_bandeau_sans_volume(self):
+        from django.test import override_settings
+
+        with override_settings(DONNEES_PERSISTANTES=False):
+            reponse = self.client.get(reverse("comptes:connexion"))
+            self.assertContains(reponse, "ne sont pas enregistrées durablement")
+            sante = self.client.get(reverse("sante"))
+            self.assertEqual(sante.status_code, 200)
+            self.assertIn(b"sans volume", sante.content)
+        reponse = self.client.get(reverse("comptes:connexion"))
+        self.assertNotContains(reponse, "ne sont pas enregistrées durablement")
+
+    def test_detection(self):
+        from pathlib import Path
+
+        from config.settings import donnees_persistantes
+
+        self.assertTrue(donnees_persistantes(Path("/home/projet")))  # hors Docker

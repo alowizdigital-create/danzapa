@@ -69,6 +69,20 @@ DEBUG = env_bool("DJANGO_DEBUG", True)
 # Docker, DATA_DIR=/data : un seul volume à monter pour tout conserver.
 DATA_DIR = Path(os.environ.get("DATA_DIR", BASE_DIR))
 
+
+def donnees_persistantes(dossier):
+    """Faux quand, dans l'image Docker, aucun volume n'est monté sur /data :
+    la base est alors dans le conteneur et disparaît au prochain déploiement."""
+    if str(dossier) != "/data":
+        return True  # hors Docker (développement)
+    try:
+        return os.stat(dossier).st_dev != os.stat("/").st_dev
+    except OSError:
+        return True
+
+
+DONNEES_PERSISTANTES = donnees_persistantes(DATA_DIR)
+
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY")
 if not SECRET_KEY:
     if DEBUG:
@@ -124,6 +138,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "apps.comptes.contexte.etat_du_serveur",
             ],
         },
     },

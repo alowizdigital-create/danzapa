@@ -44,8 +44,11 @@ class Command(BaseCommand):
                 existant.is_active = True
                 existant.save(update_fields=["password", "is_active"])
                 self.stdout.write(self.style.WARNING(
-                    f"Mot de passe de « {nom} » remplacé par DJANGO_SUPERUSER_PASSWORD. "
-                    "Retirez DJANGO_SUPERUSER_RESET et DJANGO_SUPERUSER_PASSWORD de Dokploy."
+                    "#" * 60 + "\n"
+                    f"  Mot de passe de « {nom} » remplacé par DJANGO_SUPERUSER_PASSWORD.\n"
+                    "  RETIREZ MAINTENANT DJANGO_SUPERUSER_RESET et DJANGO_SUPERUSER_PASSWORD\n"
+                    "  de l'onglet Environment de Dokploy : tant qu'ils y sont, tout mot de\n"
+                    "  passe changé dans l'application est écrasé à chaque redémarrage.\n" + "#" * 60
                 ))
             return
 

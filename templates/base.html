@@ -9,6 +9,13 @@
   {% block tete %}{% endblock %}
 </head>
 <body class="{% block classe_body %}{% endblock %}" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+  {% if not donnees_persistantes %}
+  <div class="alerte-serveur" role="alert">
+    ⚠ <strong>Les données ne sont pas enregistrées durablement</strong> : aucun volume n'est monté sur <code>/data</code>.
+    Chants, cultes et mots de passe seront <strong>perdus au prochain déploiement</strong>.
+    Dans Dokploy : Advanced → Volumes → Volume Mount « danzapa-data » sur <code>/data</code>, puis Deploy.
+  </div>
+  {% endif %}
   {% if user.is_authenticated %}
   <header class="barre-titre">
     <nav class="barre-titre-gauche">

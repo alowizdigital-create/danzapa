@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.db import connection
 from django.http import HttpResponse
@@ -20,4 +21,6 @@ def sante(request):
     """Vérification de bon fonctionnement (healthcheck Docker / Dokploy)."""
     with connection.cursor() as curseur:
         curseur.execute("SELECT 1")
-    return HttpResponse("ok", content_type="text/plain")
+    # Toujours 200 (le conteneur fonctionne) ; l'absence de volume est signalée.
+    message = "ok" if settings.DONNEES_PERSISTANTES else "ok (sans volume /data : données non conservées)"
+    return HttpResponse(message, content_type="text/plain")

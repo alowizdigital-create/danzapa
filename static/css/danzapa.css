@@ -793,3 +793,13 @@ body:not(.mode-edition) .groupe-edition-seule,
 body.mode-edition .groupe-hors-edition,
 body.mode-edition .cache-en-edition,
 body:not(.mode-edition) .cache-hors-edition { display: none; }
+
+/* Déploiement sans volume de données (voir config/settings.py) */
+.alerte-serveur {
+  background: #a4262c;
+  color: #fff;
+  padding: 0.6rem 1rem;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+.alerte-serveur code { background: rgba(255, 255, 255, 0.2); padding: 0 0.25rem; border-radius: 3px; }
