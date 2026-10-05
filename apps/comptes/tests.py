@@ -222,3 +222,14 @@ class AlerteVolumeTests(TestCase):
         from config.settings import donnees_persistantes
 
         self.assertTrue(donnees_persistantes(Path("/home/projet")))  # hors Docker
+
+
+class BasePostgresqlTests(TestCase):
+    def test_adresse_dokploy(self):
+        from config.settings import base_postgresql
+
+        reglages = base_postgresql("postgresql://danzapa:m%40t%20de%20passe@danzapa-db-abc:5432/danzapa")
+        self.assertEqual(
+            (reglages["NAME"], reglages["USER"], reglages["PASSWORD"], reglages["HOST"], reglages["PORT"]),
+            ("danzapa", "danzapa", "m@t de passe", "danzapa-db-abc", "5432"),
+        )

@@ -58,7 +58,26 @@ Pour changer un réglage, modifiez le fichier sur GitHub (icône crayon), valide
 
 `DJANGO_DEBUG=false` et `DATA_DIR=/data` sont déjà réglés dans l'image. Les autres variables possibles sont dans [`.env.example`](.env.example).
 
-## 4. Le volume de données (indispensable)
+## 4. La base de données PostgreSQL (recommandé)
+
+Les comptes, mots de passe, chants et cultes sont enregistrés dans une **base de données PostgreSQL séparée**, créée et conservée par Dokploy. Elle ne dépend pas du conteneur de l'application : un nouveau Deploy ne touche pas aux données.
+
+1. Dans le projet Danzapa : **Create Service → Database → PostgreSQL**.
+   - Name : `danzapa-db` ; Database Name : `danzapa` ; User : `danzapa` ; mot de passe : laisser Dokploy le générer.
+   - **Create**, puis **Deploy** sur la base.
+2. Dans la page de la base, copiez l'**Internal Connection URL** (elle commence par `postgresql://`).
+3. Dans l'application danzapa → **Environment**, ajoutez une ligne :
+   ```env
+   DATABASE_URL=postgresql://danzapa:…@danzapa-db-xxxx:5432/danzapa
+   ```
+   (collez l'adresse copiée telle quelle), puis **Save** et **Deploy**.
+4. Les logs affichent : « Base PostgreSQL séparée : comptes, chants et cultes sont conservés. »
+
+L'adresse de connexion contient le mot de passe de la base : elle va **uniquement dans Dokploy**, jamais dans le dépôt GitHub.
+
+Sauvegardes de la base : dans la page de la base PostgreSQL, onglet **Backups** (vers un stockage S3), ou `pg_dump`.
+
+## 5. Le volume de données (images des thèmes)
 
 Onglet **Advanced → Volumes / Mounts → Add Volume** :
 
@@ -66,9 +85,9 @@ Onglet **Advanced → Volumes / Mounts → Add Volume** :
 - **Volume name** : `danzapa-data`
 - **Mount path** : `/data`
 
-Sans ce volume, **tous les chants et cultes seraient perdus à chaque redéploiement**. Un `Bind Mount` vers un dossier du VPS fonctionne aussi : le conteneur donne lui-même les bons droits au dossier.
+Avec la base PostgreSQL (étape 4 ou 5), ce volume ne garde plus que les **images des thèmes** et la clé secrète générée ; il reste conseillé. **Sans base PostgreSQL**, c'est lui qui contient la base SQLite : sans lui, tous les chants, cultes et mots de passe seraient perdus à chaque redéploiement. Un `Bind Mount` vers un dossier du VPS fonctionne aussi : le conteneur donne lui-même les bons droits au dossier.
 
-## 5. Domaine et HTTPS
+## 6. Domaine et HTTPS
 
 Onglet **Domains → Add Domain** :
 
@@ -79,7 +98,7 @@ Onglet **Domains → Add Domain** :
 
 Dokploy fait la redirection HTTP → HTTPS et transmet l'en-tête `X-Forwarded-Proto`, que Danzapa sait lire.
 
-## 6. Déployer et premier accès
+## 7. Déployer et premier accès
 
 1. Cliquez sur **Deploy**. Suivez l'onglet **Deployments / Logs**. La construction prend 1 à 3 minutes. À la fin, vous devez voir :
    ```
@@ -101,7 +120,7 @@ Dokploy fait la redirection HTTP → HTTPS et transmet l'en-tête `X-Forwarded-P
 
 ## Mot de passe incorrect ou oublié
 
-Si plusieurs blocs « Mot de passe provisoire » apparaissent dans les logs, seul **le plus récent** (voir « Créé le ») est valable. S'il y en a un à chaque déploiement, le volume `/data` manque : les logs affichent alors « ATTENTION : aucun volume n'est monté sur /data » (étape 4).
+Si plusieurs blocs « Mot de passe provisoire » apparaissent dans les logs, seul **le plus récent** (voir « Créé le ») est valable. S'il y en a un à chaque déploiement, le volume `/data` manque : les logs affichent alors « ATTENTION : aucun volume n'est monté sur /data » (étape 4 ou 5).
 
 Pour choisir un nouveau mot de passe, deux méthodes :
 
@@ -118,13 +137,13 @@ Pour choisir un nouveau mot de passe, deux méthodes :
 
 Pour vérifier que l'application répond : `https://danzapa.zweey.com/sante/` affiche `ok`. C'est aussi le healthcheck du conteneur.
 
-## 7. Mettre à jour
+## 8. Mettre à jour
 
 À chaque nouvelle version poussée sur la branche, cliquez sur **Deploy** dans Dokploy. Les migrations s'appliquent toutes seules et les données du volume `/data` sont conservées.
 
 Pour l'automatiser : onglet **Deployments**, copiez l'URL du **webhook**. Sur GitHub, ajoutez-la dans le dépôt (**Settings → Webhooks → Add webhook**, type `application/json`, évènement *push*). Vous pouvez aussi activer **Autodeploy** si Dokploy est relié à GitHub.
 
-## 8. Sauvegardes
+## 9. Sauvegardes
 
 La commande suivante crée `/data/sauvegardes/danzapa-AAAAMMJJ-HHMMSS.tar.gz`, qui contient la base et les images. Elle garde les 14 dernières.
 
@@ -142,14 +161,14 @@ python manage.py sauvegarde
   ```
 - **Restaurer** : arrêtez l'application dans Dokploy, remplacez `db.sqlite3` et `media/` dans le volume par ceux de l'archive, puis relancez.
 
-## 9. Dépannage
+## 10. Dépannage
 
 | Symptôme | Cause probable | Solution |
 |---|---|---|
 | **Bad Request (400)** | Le domaine n'est pas dans `DJANGO_ALLOWED_HOSTS` | Corriger `config/production.env`, redéployer |
 | **Erreur CSRF (403)** à la connexion | Le site est ouvert par une adresse différente de `DJANGO_ALLOWED_HOSTS`, ou sans HTTPS | Ouvrir `https://` + le sous-domaine ; si besoin, définir `DJANGO_CSRF_TRUSTED_ORIGINS=https://danzapa.zweey.com` |
 | **Bad Gateway (502)** | Mauvais port dans le domaine, ou le conteneur a planté | Container Port = `8000` ; lire les logs du conteneur |
-| Données perdues après un redéploiement, « ATTENTION : aucun volume » dans les logs | Pas de volume sur `/data` | Ajouter le volume (étape 4) avant de ressaisir |
+| Données perdues après un redéploiement, « ATTENTION : aucun volume » dans les logs | Pas de volume sur `/data` | Ajouter le volume (étape 4 ou 5) avant de ressaisir |
 | « Mot de passe incorrect » pour `admin` | Mot de passe d'un ancien démarrage, ou faute de frappe | Section « Mot de passe incorrect ou oublié » |
 | Pas de certificat HTTPS | Le DNS ne pointe pas encore vers le VPS | Attendre la propagation, puis régénérer le certificat |
 

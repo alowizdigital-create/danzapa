@@ -15,7 +15,10 @@ mkdir -p "$DATA/media"
 
 # Sans volume monté sur /data, la base est dans le conteneur : elle (et le compte
 # administrateur) seraient perdus au prochain déploiement.
-if [ "$(stat -c %d "$DATA")" = "$(stat -c %d /)" ]; then
+if [ "$(stat -c %d "$DATA")" = "$(stat -c %d /)" ] && [ -n "${DATABASE_URL}${DATABASE_ENGINE}" ]; then
+    echo "Base PostgreSQL séparée : comptes, chants et cultes sont conservés."
+    echo "(Sans volume /data, seules les images des thèmes seraient perdues au redéploiement.)"
+elif [ "$(stat -c %d "$DATA")" = "$(stat -c %d /)" ]; then
     echo "############################################################"
     echo "  ATTENTION : aucun volume n'est monté sur $DATA."
     echo "  Les chants, cultes et comptes seront PERDUS au prochain"

@@ -9,6 +9,7 @@ import os
 import secrets
 import time
 from pathlib import Path
+from urllib.parse import unquote, urlsplit
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -81,7 +82,6 @@ def donnees_persistantes(dossier):
         return True
 
 
-DONNEES_PERSISTANTES = donnees_persistantes(DATA_DIR)
 
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY")
 if not SECRET_KEY:
@@ -146,9 +146,30 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "config.wsgi.application"
 
-# SQLite en développement. En production, DATABASE_ENGINE=postgresql
-# active PostgreSQL avec les variables DATABASE_* ci-dessous.
-if os.environ.get("DATABASE_ENGINE") == "postgresql":
+def base_postgresql(url):
+    """Réglages Django à partir d'une adresse postgresql://utilisateur:mot_de_passe@hôte:port/base
+    (l'« Internal Connection URL » affichée par Dokploy pour une base PostgreSQL)."""
+    morceaux = urlsplit(url)
+    return {
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": unquote(morceaux.path.lstrip("/")),
+        "USER": unquote(morceaux.username or ""),
+        "PASSWORD": unquote(morceaux.password or ""),
+        "HOST": morceaux.hostname or "localhost",
+        "PORT": str(morceaux.port or 5432),
+        "CONN_MAX_AGE": 60,
+    }
+
+
+# Base de données :
+# - DATABASE_URL=postgresql://… (base PostgreSQL séparée, par exemple créée dans
+#   Dokploy) : comptes, mots de passe, chants et cultes y sont conservés,
+#   indépendamment du conteneur de l'application ;
+# - sinon DATABASE_ENGINE=postgresql avec les variables DATABASE_* ;
+# - sinon SQLite dans DATA_DIR (développement, ou volume /data).
+if os.environ.get("DATABASE_URL", "").startswith(("postgres://", "postgresql://")):
+    DATABASES = {"default": base_postgresql(os.environ["DATABASE_URL"])}
+elif os.environ.get("DATABASE_ENGINE") == "postgresql":
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.postgresql",
@@ -168,6 +189,11 @@ else:
             "OPTIONS": {"timeout": 20},
         }
     }
+
+BASE_EXTERNE = DATABASES["default"]["ENGINE"].endswith("postgresql")
+# Avec une base PostgreSQL séparée, les données ne dépendent plus du volume /data
+# (qui ne garde alors que les images des thèmes et la clé secrète générée).
+DONNEES_PERSISTANTES = BASE_EXTERNE or donnees_persistantes(DATA_DIR)
 
 AUTH_USER_MODEL = "comptes.Utilisateur"
 
