@@ -183,7 +183,7 @@ class Exporteur:
             "diapo",
             fontName=famille(police),
             fontSize=taille,
-            leading=taille * 1.2,
+            leading=taille * rendu.interligne(diapo),
             alignment=ALIGNEMENTS.get(diapo.alignement, TA_CENTER),
         )
         if diapo.html:

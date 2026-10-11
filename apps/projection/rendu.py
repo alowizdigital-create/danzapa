@@ -91,6 +91,12 @@ def chasse_pour(diapo, theme):
     return chasse
 
 
+def interligne(diapo):
+    """Interligne de la diapo (multiple de la taille du texte) : choisi, ou automatique."""
+    pourcent = getattr(diapo, "interligne", None)
+    return pourcent / 100 if pourcent else INTERLIGNE
+
+
 def taille_pt(diapo, theme):
     """Taille retenue : celle choisie pour la diapo, sinon la taille du thème
     réduite si le texte ne tient pas."""
@@ -103,7 +109,7 @@ def taille_pt(diapo, theme):
     if plus_longue:
         chasse = chasse_pour(diapo, theme)
         taille = min(taille, largeur / (plus_longue * chasse))
-    taille = min(taille, hauteur / (len(lignes) * INTERLIGNE))
+    taille = min(taille, hauteur / (len(lignes) * interligne(diapo)))
     nominale = taille_nominale(diapo, theme)
     taille = max(min(TAILLE_MIN, nominale), min(taille, nominale))
     # Taille choisie pour la diapo (A+ / A−), appliquée après l'ajustement automatique.
@@ -118,4 +124,5 @@ def annoter(groupes, theme):
             diapo.taille_cqw = en_cqw(taille)
             diapo.taille_affichee = round(taille)
             diapo.pile_police = POLICES.get(diapo.police, "")
+            diapo.interligne_css = f"{interligne(diapo):g}" if getattr(diapo, "interligne", None) else ""
     return groupes

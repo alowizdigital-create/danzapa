@@ -105,6 +105,13 @@ class TailleTests(TestCase):
         large = rendu.taille_pt(d.Diapo(d.PAROLES, ligne, police="Verdana"), self.theme)
         self.assertLess(large, etroite)
 
+    def test_grand_interligne_reduit_davantage(self):
+        lignes = ["court"] * 6
+        normal = rendu.taille_pt(d.Diapo(d.PAROLES, lignes), self.theme)
+        double = rendu.taille_pt(d.Diapo(d.PAROLES, lignes, interligne=200), self.theme)
+        self.assertLess(double, normal)
+        self.assertEqual(rendu.interligne(d.Diapo(d.PAROLES, lignes)), rendu.INTERLIGNE)
+
     def test_conversion_cqw(self):
         self.assertEqual(rendu.en_cqw(96), "10.000cqw")
 
@@ -245,6 +252,19 @@ class ExportTests(TestCase):
                 self.assertIn(b"BIENVENUS", pages)
         pdf.fichiers_de_polices.cache_clear()
         pdf.famille.cache_clear()
+
+    def test_interligne_exporte(self):
+        from . import pdf
+
+        piece = self.chant.diapos.first()
+        piece.interligne = 150
+        piece.save()
+        diapositive = list(ouvrir(export.exporter(self.culte)).slides)[2]
+        paragraphe = [f for f in diapositive.shapes if f.has_text_frame][0].text_frame.paragraphs[0]
+        self.assertEqual(paragraphe.line_spacing, 1.25)
+        sans = list(ouvrir(export.exporter(self.culte)).slides)[3]
+        self.assertEqual([f for f in sans.shapes if f.has_text_frame][0].text_frame.paragraphs[0].line_spacing, 1.0)
+        self.assertTrue(pdf.exporter(self.culte).startswith(b"%PDF"))
 
     def test_pas_gras_explicite_exporte(self):
         piece = self.chant.diapos.first()

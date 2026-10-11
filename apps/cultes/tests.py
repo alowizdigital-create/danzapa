@@ -358,6 +358,26 @@ class SaisieDesChantsTests(TestCase):
         self.assertEqual((piece.taille, piece.police), (None, ""))
         self.assertEqual(self.client.post(url, {"taille": "500"}).status_code, 400)
 
+    def test_interligne_de_la_diapo(self):
+        piece = self.pieces[0]
+        url = self.url("enregistrer_diapo", piece.uuid)
+        donnees = json.loads(self.client.post(url, {"interligne": "150"}).content)
+        self.assertEqual(donnees["interligne"], 150)
+        piece.refresh_from_db()
+        self.assertEqual(piece.interligne, 150)
+        editeur = self.client.get(reverse("cultes:editeur", args=[self.culte.uuid])).content.decode()
+        self.assertIn("--interligne: 1.5;", editeur)
+        self.assertIn('data-interligne="150"', editeur)
+        self.assertIn('data-palette="interligne"', editeur)
+        self.assertIn('data-palette="taille"', editeur)
+        self.assertNotIn("tailles-pt", editeur)
+        self.hx_post(self.url("ajouter_diapo"), {"dupliquer": piece.uuid})
+        self.assertEqual(self.chant.diapos.filter(interligne=150).count(), 2)
+        self.client.post(url, {"interligne": ""})
+        piece.refresh_from_db()
+        self.assertIsNone(piece.interligne)
+        self.assertEqual(self.client.post(url, {"interligne": "500"}).status_code, 400)
+
     def test_police_inconnue_ignoree(self):
         piece = self.pieces[0]
         piece.police, piece.taille = "Comic<script>", 3

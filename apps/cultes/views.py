@@ -57,6 +57,8 @@ COULEURS_FOND = [
     "#000000", "#1f1f1f", "#404040", "#0b1f4d", "#1e3a8a", "#0f4c5c",
     "#14532d", "#4a0e1a", "#7f1d1d", "#3b0764", "#5c3d2e", "#ffffff",
 ]
+# Interlignes proposés (en %), comme PowerPoint : 1,0 · 1,15 · 1,5 · 2,0 · 2,5 · 3,0.
+INTERLIGNES = [(100, "1,0"), (115, "1,15"), (150, "1,5"), (200, "2,0"), (250, "2,5"), (300, "3,0")]
 TAILLES_PT = [8, 10, 12, 14, 16, 18, 20, 24, 28, 32, 36, 40, 44, 48, 54, 60, 66, 72, 80, 88, 96, 110, 120, 140, 160, 200]
 
 
@@ -76,6 +78,7 @@ def contexte_espace(request, culte, selection=None, edition=None, piece=None):
         "theme": theme,
         "polices": POLICES.items(),
         "tailles_pt": TAILLES_PT,
+        "interlignes": INTERLIGNES,
         "couleurs_texte": COULEURS_TEXTE,
         "couleurs_fond": COULEURS_FOND,
         "animations": DiapoChant.ANIMATIONS,
@@ -357,6 +360,8 @@ def enregistrer_diapo(request, pk, chant_pk, piece_pk):
         piece.taille = donnees["taille"]  # vide : automatique
     if "police" in request.POST:
         piece.police = donnees["police"]
+    if "interligne" in request.POST:
+        piece.interligne = donnees["interligne"]  # vide : automatique
     if "couleur_fond" in request.POST:
         piece.couleur_fond = donnees["couleur_fond"]
     if "animation" in request.POST:
@@ -369,7 +374,7 @@ def enregistrer_diapo(request, pk, chant_pk, piece_pk):
 
     apercu = diapos.Diapo(
         diapos.PAROLES, piece.texte.split("\n") if piece.texte else [""],
-        echelle=piece.echelle, taille=piece.taille, police=piece.police,
+        echelle=piece.echelle, taille=piece.taille, police=piece.police, interligne=piece.interligne,
     )
     taille = rendu.taille_pt(apercu, culte.theme_effectif)
     return JsonResponse(
@@ -379,6 +384,7 @@ def enregistrer_diapo(request, pk, chant_pk, piece_pk):
             "taille_pt": round(taille),
             "taille_choisie": piece.taille,
             "police": piece.police,
+            "interligne": piece.interligne,
             "alignement": piece.alignement,
             "echelle": piece.echelle,
             "couleur_fond": piece.couleur_fond,
@@ -408,14 +414,14 @@ def ajouter_diapo(request, pk, chant_pk):
         nouvelle.alignement, nouvelle.echelle, nouvelle.couleur_fond = (
             modele.alignement, modele.echelle, modele.couleur_fond,
         )
-        nouvelle.taille, nouvelle.police = modele.taille, modele.police
+        nouvelle.taille, nouvelle.police, nouvelle.interligne = modele.taille, modele.police, modele.interligne
         nouvelle.animation, nouvelle.vitesse_animation = modele.animation, modele.vitesse_animation
     elif apres:
         # Une nouvelle diapo garde la mise en page de la précédente.
         nouvelle.alignement, nouvelle.echelle, nouvelle.couleur_fond = (
             apres.alignement, apres.echelle, apres.couleur_fond,
         )
-        nouvelle.taille, nouvelle.police = apres.taille, apres.police
+        nouvelle.taille, nouvelle.police, nouvelle.interligne = apres.taille, apres.police, apres.interligne
         nouvelle.animation, nouvelle.vitesse_animation = apres.animation, apres.vitesse_animation
     nouvelle.save()
     position = pieces.index(apres) + 1 if apres else len(pieces)

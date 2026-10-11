@@ -368,7 +368,7 @@ a.carte-lien:hover { border-color: var(--accent); }
   text-align: center;
   font-family: var(--police, Calibri, Carlito, sans-serif);
   font-weight: var(--poids, 700);
-  line-height: 1.2;
+  line-height: var(--interligne, 1.2);
 }
 /* --taille : calculée côté serveur (apps/projection/rendu.py), comme pour le .pptx */
 .diapo-contenu p, .diapo-contenu > div { margin: 0; font-size: var(--taille, 5.6cqw); overflow-wrap: anywhere; min-height: 1em; }
@@ -816,7 +816,7 @@ body:not(.mode-edition) .cache-hors-edition { display: none; }
   background: var(--surface);
 }
 .outils-police select { width: 8.5rem; }
-.outils-police input { width: 4.4rem; }
+.outils-police input { width: 2.8rem; text-align: center; border-radius: 4px 0 0 4px; }
 .outils-police input::-webkit-inner-spin-button { display: none; }
 .outils-police input { -moz-appearance: textfield; appearance: textfield; }
 .outils-police input.taille-auto { color: var(--texte-doux); font-style: italic; }
@@ -957,3 +957,30 @@ body.presentateur {
 .diapo-image-fichier.avec-legende { height: 82%; }
 .diapo-legende { position: absolute; left: 5%; right: 5%; bottom: 0; height: 12%; width: auto; display: flex; flex-direction: column; justify-content: center; font-family: var(--police-titres, Georgia, serif); }
 .icone-pdf { width: auto; padding: 0 0.35rem; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.03em; }
+
+/* Taille : champ + bouton ▾ ; listes Taille et Interligne */
+.champ-taille { display: inline-flex; align-items: stretch; }
+.ouvrir-liste {
+  border: 1px solid var(--bordure);
+  border-left: none;
+  border-radius: 0 4px 4px 0;
+  background: var(--surface);
+  padding: 0 0.3rem;
+  font-size: 0.7rem;
+  cursor: pointer;
+}
+.ouvrir-liste:hover { color: var(--accent); }
+.ouvrir-liste:disabled { opacity: 0.5; cursor: default; }
+.palette-liste { width: 13rem; }
+.liste-valeurs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.25rem; margin-bottom: 0.4rem; }
+.liste-valeurs button {
+  padding: 0.3rem 0;
+  border: 1px solid var(--bordure);
+  border-radius: 4px;
+  background: var(--surface);
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.liste-valeurs button:hover { border-color: var(--accent); color: var(--accent); }
+.liste-tailles { max-height: 12rem; overflow-y: auto; }

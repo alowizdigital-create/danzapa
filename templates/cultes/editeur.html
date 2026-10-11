@@ -94,9 +94,11 @@
           <option value="">Thème ({{ theme.police }})</option>
           {% for nom, pile in polices %}<option value="{{ nom }}" data-pile="{{ pile }}" style="font-family: {{ pile }}">{{ nom }}</option>{% endfor %}
         </select>
-        <input type="number" data-taille-diapo data-en-edition list="tailles-pt" min="8" max="200" step="1" inputmode="numeric"
-               title="Taille du texte (pt). Effacer puis Entrée : taille automatique du thème." aria-label="Taille du texte">
-        <datalist id="tailles-pt">{% for t in tailles_pt %}<option value="{{ t }}">{% endfor %}</datalist>
+        <span class="champ-taille">
+          <input type="text" data-taille-diapo data-en-edition inputmode="numeric" maxlength="3" autocomplete="off"
+                 title="Taille du texte (pt) : choisir dans la liste ▾, ou taper puis Entrée. Vide : automatique." aria-label="Taille du texte">
+          <button type="button" class="ouvrir-liste" data-ouvrir-couleurs="taille" data-en-edition aria-haspopup="true" title="Choisir une taille" aria-label="Choisir une taille">▾</button>
+        </span>
       </div>
       <div class="outils-format">
       <button type="button" class="outil outil-carre" data-format="bold" data-en-edition title="Gras (Ctrl+B)"><b>G</b></button>
@@ -117,6 +119,9 @@
       <button type="button" class="outil outil-carre" data-diapo-reglage="gauche" data-en-edition title="Aligner à gauche">⇤</button>
       <button type="button" class="outil outil-carre" data-diapo-reglage="centre" data-en-edition title="Centrer">≡</button>
       <button type="button" class="outil outil-carre" data-diapo-reglage="droite" data-en-edition title="Aligner à droite">⇥</button>
+      <button type="button" class="outil outil-couleur" data-ouvrir-couleurs="interligne" data-en-edition aria-haspopup="true" title="Interligne (espace entre les lignes)">
+        <span aria-hidden="true">↕</span><span data-apercu="interligne">Auto</span><span class="fleche">▾</span>
+      </button>
       <button type="button" class="outil outil-couleur" data-ouvrir-couleurs="fond" data-en-edition aria-haspopup="true" title="Couleur de fond de la diapo">
         <span class="carre-fond" data-apercu="fond"></span><span>Fond</span><span class="fleche">▾</span>
       </button>
@@ -253,6 +258,16 @@
   <div class="nuancier">{% for c in couleurs_texte %}<button type="button" data-couleur="{{ c }}" style="background: {{ c }}" title="{{ c }}" aria-label="{{ c }}"></button>{% endfor %}</div>
   <label class="palette-ligne">🎨 Autre couleur… <input type="color" data-couleur-libre value="#ffd700"></label>
   <button type="button" class="palette-ligne" data-couleur="">↺ Couleur du thème</button>
+</div>
+<div class="palette palette-liste" data-palette="taille" role="dialog" aria-label="Taille du texte" hidden>
+  <p class="palette-titre">Taille du texte (pt)</p>
+  <div class="liste-valeurs liste-tailles">{% for t in tailles_pt %}<button type="button" data-valeur="{{ t }}">{{ t }}</button>{% endfor %}</div>
+  <button type="button" class="palette-ligne" data-valeur="">↺ Automatique (thème)</button>
+</div>
+<div class="palette palette-liste" data-palette="interligne" role="dialog" aria-label="Interligne" hidden>
+  <p class="palette-titre">Interligne</p>
+  <div class="liste-valeurs">{% for valeur, libelle in interlignes %}<button type="button" data-valeur="{{ valeur }}">{{ libelle }}</button>{% endfor %}</div>
+  <button type="button" class="palette-ligne" data-valeur="">↺ Automatique (1,2)</button>
 </div>
 <div class="palette" data-palette="fond" role="dialog" aria-label="Fond de la diapo" hidden>
   <p class="palette-titre">Fond de la diapo</p>

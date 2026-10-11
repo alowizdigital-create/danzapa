@@ -45,6 +45,7 @@ class DiapoChantForm(forms.Form):
     alignement = forms.ChoiceField(choices=[("gauche", ""), ("centre", ""), ("droite", "")], required=False)
     echelle = forms.IntegerField(required=False, min_value=50, max_value=200)
     taille = forms.IntegerField(required=False, min_value=8, max_value=200)
+    interligne = forms.IntegerField(required=False, min_value=80, max_value=300)
     police = forms.CharField(required=False, max_length=40)
     animation = forms.ChoiceField(choices=DiapoChant.ANIMATIONS, required=False)
     vitesse_animation = forms.ChoiceField(choices=DiapoChant.VITESSES, required=False)

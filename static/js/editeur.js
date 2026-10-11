@@ -61,6 +61,7 @@
     g.dataset.taille = source.dataset.taille || "";
     g.dataset.taillePt = source.dataset.taillePt || "";
     g.dataset.police = source.dataset.police || "";
+    g.dataset.interligne = source.dataset.interligne || "";
     g.dataset.animation = source.dataset.animation || "";
     g.dataset.vitesse = source.dataset.vitesse || "normale";
     g.dataset.fond = source.dataset.fond || "";
@@ -242,6 +243,11 @@
         else delete v.dataset.animation;
       }
       if (reglages.vitesse_animation) v.dataset.vitesse = reglages.vitesse_animation;
+      if (reglages.interligne !== undefined) {
+        v.dataset.interligne = reglages.interligne || "";
+        if (reglages.interligne) v.style.setProperty("--interligne", String(Number(reglages.interligne) / 100));
+        else v.style.removeProperty("--interligne");
+      }
       if (reglages.police !== undefined) {
         v.dataset.police = reglages.police;
         const pile = pileDe(reglages.police);
@@ -273,6 +279,7 @@
     corps.append("alignement", g.dataset.alignement || "centre");
     corps.append("taille", g.dataset.taille || "");
     corps.append("police", g.dataset.police || "");
+    corps.append("interligne", g.dataset.interligne || "");
     corps.append("animation", g.dataset.animation || "");
     corps.append("vitesse_animation", g.dataset.vitesse || "normale");
     corps.append("couleur_fond", g.dataset.fond || "");
@@ -329,6 +336,10 @@
       const n = parseInt(valeur, 10);
       if (Number.isNaN(n)) g.dataset.taille = ""; // automatique : le serveur renvoie la taille
       else fixerTaille(g, Math.min(200, Math.max(8, n)));
+    } else if (reglage === "interligne") {
+      g.dataset.interligne = valeur || "";
+      if (valeur) g.style.setProperty("--interligne", String(Number(valeur) / 100));
+      else g.style.removeProperty("--interligne");
     } else if (reglage === "animation") {
       g.dataset.animation = valeur;
     } else if (reglage === "vitesse") {
@@ -353,6 +364,7 @@
       alignement: g.dataset.alignement,
       couleur_fond: g.dataset.fond,
       police: g.dataset.police || "",
+      interligne: g.dataset.interligne || "",
       taille: g.style.getPropertyValue("--taille") || undefined,
       taille_pt: g.dataset.taillePt,
       taille_choisie: g.dataset.taille,
@@ -371,7 +383,7 @@
   }
 
   function taillesProposees() {
-    return Array.from(document.querySelectorAll("#tailles-pt option")).map((o) => Number(o.value));
+    return Array.from(document.querySelectorAll('[data-palette="taille"] [data-valeur]')).map((b) => Number(b.dataset.valeur)).filter(Boolean);
   }
 
   function pileDe(police) {
@@ -389,6 +401,12 @@
       champTaille.value = avecTexte ? g.dataset.taillePt || "" : "";
       champTaille.classList.toggle("taille-auto", avecTexte && !g.dataset.taille);
     }
+    const interligne = avecTexte ? g.dataset.interligne || "" : "";
+    const apercuInterligne = document.querySelector('[data-apercu="interligne"]');
+    if (apercuInterligne) apercuInterligne.textContent = interligne ? (Number(interligne) / 100).toLocaleString("fr-FR", { minimumFractionDigits: 1 }) : "Auto";
+    document.querySelectorAll('[data-palette="interligne"] [data-valeur]').forEach((b) => b.classList.toggle("outil-actif", b.dataset.valeur === interligne));
+    const tailleChoisie = avecTexte ? g.dataset.taille || "" : "";
+    document.querySelectorAll('[data-palette="taille"] [data-valeur]').forEach((b) => b.classList.toggle("outil-actif", b.dataset.valeur === tailleChoisie));
     const choixPolice = document.querySelector("[data-police-diapo]");
     if (choixPolice) choixPolice.value = avecTexte ? g.dataset.police || "" : "";
     document.querySelectorAll("[data-animation-choix]").forEach((b) => {
@@ -621,6 +639,12 @@
     if (bouton) return ouvrirPalette(bouton);
     if (!paletteOuverte) return;
     const type = paletteOuverte.dataset.palette;
+    // Listes Taille et Interligne : un clic applique tout de suite.
+    const valeur = evt.target.closest("[data-valeur]");
+    if (valeur && paletteOuverte.contains(valeur)) {
+      reglerDiapo(type, valeur.dataset.valeur);
+      return fermerPalette();
+    }
     const pastille = evt.target.closest("[data-couleur]");
     if (pastille && paletteOuverte.contains(pastille)) {
       choisirCouleur(type, pastille.dataset.couleur);

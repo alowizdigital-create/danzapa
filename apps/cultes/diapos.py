@@ -34,6 +34,7 @@ class Diapo:
     echelle: int = 100
     taille: int | None = None  # pt choisis ; None : automatique
     police: str = ""  # vide : police du thème
+    interligne: int | None = None  # en % ; None : automatique
     image_url: str = ""  # diapo image
     image_nom: str = ""  # fichier dans MEDIA_ROOT (exports)
     animation: str = ""  # entrée du texte (DiapoChant.ANIMATIONS)
@@ -69,6 +70,7 @@ def diapos_du_chant(element):
                 echelle=piece.echelle,
                 taille=piece.taille,
                 police=piece.police,
+                interligne=piece.interligne,
                 animation=piece.animation,
                 vitesse_animation=piece.vitesse_animation,
                 couleur_fond=piece.couleur_fond,

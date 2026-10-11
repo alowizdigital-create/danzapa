@@ -163,7 +163,8 @@ class Exporteur:
         for i, morceaux in enumerate(lignes or [[]]):
             paragraphe = cadre.paragraphs[0] if i == 0 else cadre.add_paragraph()
             paragraphe.alignment = ALIGNEMENTS.get(diapo.alignement, PP_ALIGN.CENTER)
-            paragraphe.line_spacing = 1.0
+            # Interligne « simple » de PowerPoint ≈ 1,2 × la taille : même rendu que l'aperçu.
+            paragraphe.line_spacing = round(rendu.interligne(diapo) / rendu.INTERLIGNE, 3)
             if not morceaux:
                 # Ligne vide : garder sa hauteur.
                 paragraphe.font.size = taille

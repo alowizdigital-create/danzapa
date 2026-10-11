@@ -84,6 +84,7 @@ class DiapoChant(models.Model):
     ALIGNEMENTS = [(GAUCHE, "Gauche"), (CENTRE, "Centré"), (DROITE, "Droite")]
     ECHELLE_MIN, ECHELLE_MAX = 50, 200
     TAILLE_MIN, TAILLE_MAX = 8, 200
+    INTERLIGNE_MIN, INTERLIGNE_MAX = 80, 300  # en % de la taille du texte
     # Animations d'entrée du texte (projection, aperçu de l'éditeur, export .pptx).
     ANIMATIONS = [
         ("", "Aucune"),
@@ -109,6 +110,8 @@ class DiapoChant(models.Model):
         "taille du texte (pt)", null=True, blank=True,
         validators=[MinValueValidator(TAILLE_MIN), MaxValueValidator(TAILLE_MAX)],
     )
+    # Interligne en % (150 = 1,5 ligne) ; vide : automatique (1,2).
+    interligne = models.PositiveSmallIntegerField(null=True, blank=True)
     # Vide : police du thème. Noms de apps/projection/models.py (POLICES).
     police = models.CharField(max_length=40, blank=True)
     animation = models.CharField(max_length=12, choices=ANIMATIONS, blank=True)
@@ -136,6 +139,8 @@ class DiapoChant(models.Model):
         self.echelle = min(self.ECHELLE_MAX, max(self.ECHELLE_MIN, self.echelle or 100))
         if self.taille:
             self.taille = min(self.TAILLE_MAX, max(self.TAILLE_MIN, self.taille))
+        if self.interligne:
+            self.interligne = min(self.INTERLIGNE_MAX, max(self.INTERLIGNE_MIN, self.interligne))
         from apps.projection.models import POLICES
 
         if self.police not in POLICES:
