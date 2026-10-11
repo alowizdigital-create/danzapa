@@ -394,6 +394,50 @@ def enregistrer_diapo(request, pk, chant_pk, piece_pk):
     )
 
 
+@peut_modifier
+@require_POST
+def enregistrer_bienvenue(request, pk):
+    """Sauvegarde automatique de la diapo de bienvenue, modifiée sur place comme
+    une diapo de chant (mêmes champs, même réponse JSON)."""
+    from apps.chants import mise_en_forme
+
+    culte = get_object_or_404(Culte, uuid=pk)
+    form = DiapoChantForm(request.POST)
+    if not form.is_valid():
+        return HttpResponseBadRequest(premiere_erreur(form))
+    donnees = form.cleaned_data
+    reglages = dict(culte.bienvenue_reglages or {})
+    if "contenu" in request.POST:
+        culte.bienvenue_html = mise_en_forme.nettoyer(donnees["contenu"])
+        culte.texte_bienvenue = mise_en_forme.texte_brut(culte.bienvenue_html).strip()
+        if not culte.texte_bienvenue:
+            culte.bienvenue_html = ""
+    for champ in ("alignement", "taille", "police", "interligne", "couleur_fond", "animation", "vitesse_animation"):
+        if champ in request.POST:
+            reglages[champ] = donnees.get(champ) or None
+    if reglages.get("police") and reglages["police"] not in POLICES:
+        reglages["police"] = None
+    culte.bienvenue_reglages = {k: v for k, v in reglages.items() if v}
+    culte.save(update_fields=["bienvenue_html", "texte_bienvenue", "bienvenue_reglages", "date_modification"])
+
+    apercu = diapos.diapo_de_bienvenue(culte)
+    taille = rendu.taille_pt(apercu, culte.theme_effectif)
+    return JsonResponse(
+        {
+            "contenu": culte.bienvenue_html,
+            "taille": rendu.en_cqw(taille),
+            "taille_pt": round(taille),
+            "taille_choisie": apercu.taille,
+            "police": apercu.police,
+            "interligne": apercu.interligne,
+            "alignement": apercu.alignement,
+            "couleur_fond": apercu.couleur_fond,
+            "animation": apercu.animation,
+            "vitesse_animation": apercu.vitesse_animation,
+        }
+    )
+
+
 def renumeroter_diapos(chant, pieces):
     for rang, piece in enumerate(pieces, start=1):
         piece.ordre = rang

@@ -17,13 +17,11 @@ class ThemeForm(forms.ModelForm):
             "police_titres",
             "taille_titre",
             "titres_majuscules",
-            "couleur_bandeau",
             "image_bienvenue",
         ]
         widgets = {
             "couleur_fond": forms.TextInput(attrs={"type": "color"}),
             "couleur_texte": forms.TextInput(attrs={"type": "color"}),
-            "couleur_bandeau": forms.TextInput(attrs={"type": "color"}),
             "image_fond": forms.ClearableFileInput(attrs={"accept": "image/*"}),
             "image_bienvenue": forms.ClearableFileInput(attrs={"accept": "image/*"}),
         }

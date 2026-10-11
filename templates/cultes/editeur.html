@@ -169,12 +169,13 @@
   </div>
 
   <div class="ruban-panneau" data-panneau="creation" hidden>
-    <form class="ruban-groupe ruban-form" hx-post="{% url 'cultes:parametres' culte.uuid %}" hx-trigger="change" hx-target="#espace" hx-swap="outerHTML">
-      <label>Texte de bienvenue
-        <textarea name="texte_bienvenue" rows="2" placeholder="Vide : pas de diapo de bienvenue">{{ culte.texte_bienvenue }}</textarea>
-      </label>
+    <div class="ruban-groupe">
+      <button type="button" class="outil" data-chant-action="editer" data-chant="bienvenue" data-hors-edition
+              title="Modifier le texte de la diapo de bienvenue directement sur la diapo (ou double-clic dessus). Videz le texte pour ne pas l'afficher.">
+        <span class="outil-icone">✎</span>Modifier la diapo<br>de bienvenue
+      </button>
       <span class="ruban-libelle">Première diapo</span>
-    </form>
+    </div>
     <form class="ruban-groupe ruban-form" hx-post="{% url 'cultes:parametres' culte.uuid %}" hx-trigger="change" hx-target="#espace" hx-swap="outerHTML">
       <label>Lignes par diapo
         <input type="number" name="lignes_par_diapo" min="1" max="12" value="{{ culte.lignes_par_diapo }}">

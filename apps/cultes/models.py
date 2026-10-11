@@ -37,6 +37,12 @@ class Culte(models.Model):
         default=BIENVENUE_PAR_DEFAUT,
         help_text="Première diapo du culte. Laisser vide pour ne pas l'afficher.",
     )
+    # Diapo de bienvenue modifiable sur place, comme une diapo de chant :
+    # texte mis en forme (HTML nettoyé, apps/chants/mise_en_forme.py) et réglages
+    # (alignement, taille, police, interligne, couleur_fond, animation…).
+    # texte_bienvenue en est la version texte brut.
+    bienvenue_html = models.TextField(blank=True)
+    bienvenue_reglages = models.JSONField(default=dict, blank=True)
     theme = models.ForeignKey(
         "projection.Theme",
         on_delete=models.SET_NULL,
@@ -76,6 +82,11 @@ class Culte(models.Model):
     def save(self, *args, **kwargs):
         if not self.titre:
             self.titre = titre_pour(self.date)
+        # Culte créé (texte par défaut) ou ancien culte : HTML tiré du texte simple.
+        if not self.bienvenue_html and self.texte_bienvenue.strip():
+            from apps.chants import mise_en_forme
+
+            self.bienvenue_html = mise_en_forme.depuis_texte(self.texte_bienvenue)
         super().save(*args, **kwargs)
 
     @property
@@ -108,6 +119,8 @@ class Culte(models.Model):
             titre=titre_pour(date),
             date=date,
             texte_bienvenue=self.texte_bienvenue,
+            bienvenue_html=self.bienvenue_html,
+            bienvenue_reglages=dict(self.bienvenue_reglages or {}),
             theme_id=self.theme_id,
             lignes_par_diapo=self.lignes_par_diapo,
             cree_par=par,

@@ -15,9 +15,8 @@ MARGE = 0.05  # de chaque côté
 LARGEUR_UTILE_PT = LARGEUR_PT * (1 - 2 * MARGE)
 HAUTEUR_UTILE_PT = HAUTEUR_PT * 0.88
 INTERLIGNE = 1.2
-# Les majuscules sont plus larges ; celles, italiques, du bandeau de bienvenue encore plus.
+# Les majuscules sont plus larges.
 FACTEUR_MAJUSCULES = 1.3
-FACTEUR_BIENVENUE = 1.35
 TAILLE_MIN = 24
 
 
@@ -25,9 +24,6 @@ def en_cqw(points):
     return f"{points * 100 / LARGEUR_PT:.3f}cqw"
 
 
-# Bandeau de bienvenue : 84 % × 44 % de la diapo, texte à l'intérieur.
-LARGEUR_BANDEAU_PT = LARGEUR_PT * 0.84
-HAUTEUR_BANDEAU_PT = HAUTEUR_PT * 0.44
 
 
 # Diapo image : l'image occupe le haut, la légende (titre) une bande en bas.
@@ -58,8 +54,6 @@ def zone_texte(diapo):
     """Largeur et hauteur (pt) disponibles pour le texte de la diapo."""
     if diapo.type == d.IMAGE:
         return LARGEUR_UTILE_PT, HAUTEUR_LEGENDE_PT
-    if diapo.type == d.BIENVENUE:
-        return LARGEUR_BANDEAU_PT * 0.94, HAUTEUR_BANDEAU_PT * 0.94
     return LARGEUR_UTILE_PT, HAUTEUR_UTILE_PT
 
 
@@ -74,18 +68,14 @@ def taille_nominale(diapo, theme):
 
 
 def en_majuscules(diapo, theme):
-    if diapo.type == d.BIENVENUE:
-        return True
     return diapo.type == d.TITRE and theme.titres_majuscules
 
 
 def chasse_pour(diapo, theme):
     """Largeur moyenne d'un caractère de la diapo, en proportion de la taille."""
-    police = theme.police if diapo.type in (d.PAROLES, d.TEXTE) else theme.police_titres
+    police = theme.police if diapo.type in (d.PAROLES, d.TEXTE, d.BIENVENUE) else theme.police_titres
     police = getattr(diapo, "police", "") or police
     chasse = CHASSES.get(police, 0.6)
-    if diapo.type == d.BIENVENUE:
-        return chasse * FACTEUR_BIENVENUE
     if en_majuscules(diapo, theme):
         return chasse * FACTEUR_MAJUSCULES
     return chasse

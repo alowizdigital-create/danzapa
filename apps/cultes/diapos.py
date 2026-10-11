@@ -113,14 +113,43 @@ def diapos_de_l_image(element):
     return diapos
 
 
+# Identifiant d'édition de la diapo de bienvenue (comme un chant à une seule diapo).
+ID_BIENVENUE = "bienvenue"
+
+
+def diapo_de_bienvenue(culte):
+    """Diapo de bienvenue : texte simple modifiable sur place, avec ses réglages.
+    Vide, elle reste dans l'éditeur mais n'est ni projetée ni exportée (masquée)."""
+    from apps.chants import mise_en_forme
+
+    reglages = culte.bienvenue_reglages or {}
+    html = culte.bienvenue_html
+    texte = mise_en_forme.texte_brut(html) if html else ""
+    vide = not texte.strip()
+    return Diapo(
+        BIENVENUE,
+        texte.split("\n") if texte else [""],
+        masque=vide,
+        libelle="Bienvenue (vide : non projetée)" if vide else "Bienvenue",
+        html=html,
+        alignement=reglages.get("alignement") or "centre",
+        taille=reglages.get("taille"),
+        police=reglages.get("police") or "",
+        interligne=reglages.get("interligne"),
+        couleur_fond=reglages.get("couleur_fond") or "",
+        animation=reglages.get("animation") or "",
+        vitesse_animation=reglages.get("vitesse_animation") or "normale",
+        chant_id=ID_BIENVENUE,
+        piece_id=ID_BIENVENUE,
+    )
+
+
 def groupes_du_culte(culte, elements=None):
     """Diapos regroupées par élément ; le premier groupe (bienvenue) n'a pas d'élément."""
     if elements is None:
         elements = culte.elements_complets()
     groupes = []
-    if culte.texte_bienvenue.strip():
-        lignes = [l.strip() for l in culte.texte_bienvenue.splitlines() if l.strip()]
-        groupes.append(Groupe(None, [Diapo(BIENVENUE, lignes, libelle="Bienvenue")]))
+    groupes.append(Groupe(None, [diapo_de_bienvenue(culte)]))
     for element in elements:
         if element.type == element.CHANT and element.chant:
             diapos = diapos_du_chant(element)

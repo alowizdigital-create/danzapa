@@ -68,6 +68,8 @@ class Exporteur:
         for groupe in d.groupes_du_culte(self.culte):
             nom = groupe.element.nom if groupe.element else "Bienvenue"
             for diapo in groupe.diapos:
+                if diapo.type == d.BIENVENUE and diapo.masque:
+                    continue  # bienvenue vide : pas de diapo
                 self.ajouter(diapo, nom)
         sortie = io.BytesIO()
         self.presentation.save(sortie)
@@ -83,9 +85,6 @@ class Exporteur:
 
         if diapo.type == d.BIENVENUE and self.image_bienvenue:
             self.image_pleine_page(diapositive, self.image_bienvenue)
-        elif diapo.type == d.BIENVENUE:
-            self.bandeau(diapositive)
-            self.texte(diapositive, diapo, italique=True, police=self.theme.police_titres, gras=True)
         elif diapo.type == d.TITRE:
             self.texte(diapositive, diapo, police=self.theme.police_titres, gras=self.theme.gras)
         elif diapo.type == d.IMAGE:
@@ -124,24 +123,6 @@ class Exporteur:
         if diapo.lignes:
             zone = self.texte(diapositive, diapo, police=self.theme.police_titres, gras=self.theme.gras)
             zone.top = pt(rendu.HAUTEUR_PT - rendu.HAUTEUR_LEGENDE_PT)
-
-    def bandeau(self, diapositive):
-        """Bandeau gris encadré de deux filets, comme la diapo de bienvenue actuelle."""
-        gauche = pt((rendu.LARGEUR_PT - rendu.LARGEUR_BANDEAU_PT) / 2)
-        haut = pt((rendu.HAUTEUR_PT - rendu.HAUTEUR_BANDEAU_PT) / 2)
-        largeur, hauteur = pt(rendu.LARGEUR_BANDEAU_PT), pt(rendu.HAUTEUR_BANDEAU_PT)
-        filet = pt(4)
-        formes = diapositive.shapes
-        for y, h, couleur in (
-            (haut - filet * 2, filet, "#c8c8c8"),
-            (haut, hauteur, self.theme.couleur_bandeau),
-            (haut + hauteur + filet, filet, "#c8c8c8"),
-        ):
-            forme = formes.add_shape(MSO_SHAPE.RECTANGLE, gauche, y, largeur, h)
-            forme.fill.solid()
-            forme.fill.fore_color.rgb = rgb(couleur)
-            forme.line.fill.background()
-            forme.shadow.inherit = False
 
     def texte(self, diapositive, diapo, police, gras, italique=False):
         largeur, hauteur = rendu.zone_texte(diapo)

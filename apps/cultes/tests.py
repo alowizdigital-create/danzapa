@@ -64,9 +64,11 @@ class DiaposDuCulteTests(TestCase):
         liste = diapos.diapos_du_culte(self.culte)
         self.assertEqual([d.lignes for d in liste[2:4]], [["1. Sans attendre", "Je veux tendre"], ["Au bonheur promis"]])
 
-    def test_sans_bienvenue(self):
-        self.culte.texte_bienvenue = "  "
-        self.assertEqual(diapos.diapos_du_culte(self.culte)[0].type, "titre")
+    def test_bienvenue_vide_non_projetee(self):
+        self.culte.bienvenue_html = ""
+        bienvenue = diapos.diapos_du_culte(self.culte)[0]
+        self.assertEqual((bienvenue.type, bienvenue.masque), (diapos.BIENVENUE, True))  # gardée dans l'éditeur
+        self.assertEqual(diapos.diapos_du_culte(self.culte, inclure_masquees=False)[0].type, diapos.TITRE)
 
     def test_texte_libre(self):
         ElementCulte.objects.create(
@@ -622,3 +624,82 @@ class DiapoImageTests(TestCase):
         diapo = list(presentation.slides)[1]
         self.assertEqual(sum(1 for f in diapo.shapes if f.shape_type == 13), 1)  # l'image
         self.assertIn("Légende", [p.text for f in diapo.shapes if f.has_text_frame for p in f.text_frame.paragraphs])
+
+
+def ouvrir(contenu):
+    from io import BytesIO
+
+    from pptx import Presentation
+
+    return Presentation(BytesIO(contenu))
+
+
+def textes(diapositive):
+    return [p.text for f in diapositive.shapes if f.has_text_frame for p in f.text_frame.paragraphs if p.text]
+
+
+class BienvenueTests(TestCase):
+    def setUp(self):
+        self.editeur = utilisateur("editeur", roles.EDITEUR)
+        self.lecteur = utilisateur("lecteur", roles.LECTEUR)
+        self.culte = Culte.objects.create(date=date(2026, 9, 20))
+        self.client.force_login(self.editeur)
+        self.url = reverse("cultes:enregistrer_bienvenue", args=[self.culte.uuid])
+
+    def test_texte_par_defaut_en_html(self):
+        self.assertEqual(
+            self.culte.bienvenue_html, "<div>Bienvenus</div><div>dans la</div><div>maison du Seigneur</div>"
+        )
+        bienvenue = diapos.diapos_du_culte(self.culte)[0]
+        self.assertEqual((bienvenue.type, bienvenue.chant_id, bienvenue.piece_id), (diapos.BIENVENUE, "bienvenue", "bienvenue"))
+
+    def test_modification_sur_place(self):
+        reponse = self.client.post(
+            self.url,
+            {"contenu": 'Soyez les <b>bienvenus</b><div><span style="color: #ffd700">Paix</span></div><script>x</script>',
+             "taille": "60", "police": "Georgia", "interligne": "150", "couleur_fond": "#0b1f4d", "alignement": "gauche"},
+        )
+        donnees = json.loads(reponse.content)
+        self.assertNotIn("script", donnees["contenu"])
+        self.assertEqual(donnees["taille_pt"], 60)
+        self.culte.refresh_from_db()
+        self.assertEqual(self.culte.texte_bienvenue, "Soyez les bienvenus\nPaix")
+        self.assertEqual(
+            self.culte.bienvenue_reglages,
+            {"taille": 60, "police": "Georgia", "interligne": 150, "couleur_fond": "#0b1f4d", "alignement": "gauche"},
+        )
+        page = self.client.get(reverse("cultes:editeur", args=[self.culte.uuid])).content.decode()
+        self.assertIn('data-chant="bienvenue" data-piece="bienvenue"', page)
+        self.assertIn("--police: Georgia,", page)
+        self.assertNotIn('name="texte_bienvenue"', page)
+        # Exports : texte simple, mis en forme, sans bandeau.
+        from apps.projection import pptx as export
+
+        diapositive = list(ouvrir(export.exporter(self.culte)).slides)[0]
+        self.assertEqual(textes(diapositive), ["Soyez les bienvenus", "Paix"])
+        self.assertEqual(len(diapositive.shapes), 1)
+        self.assertEqual(str(diapositive.background.fill.fore_color.rgb), "0B1F4D")
+        # Duplication : texte et réglages gardés.
+        copie = self.culte.dupliquer(date(2026, 9, 27))
+        self.assertEqual((copie.bienvenue_html, copie.bienvenue_reglages), (self.culte.bienvenue_html, self.culte.bienvenue_reglages))
+
+    def test_vide_ni_projetee_ni_exportee(self):
+        import re
+
+        from apps.projection import pdf
+
+        self.client.post(self.url, {"contenu": "<div><br></div>"})
+        self.culte.refresh_from_db()
+        self.assertEqual((self.culte.bienvenue_html, self.culte.texte_bienvenue), ("", ""))
+        from apps.projection import pptx as export
+
+        self.assertEqual(len(ouvrir(export.exporter(self.culte)).slides), 0)
+        self.assertEqual(len(re.findall(rb"/Type /Page[^s]", pdf.exporter(self.culte))), 0)
+        page = self.client.get(reverse("cultes:editeur", args=[self.culte.uuid]))
+        self.assertContains(page, "vide : non projetée")
+        self.culte.save()  # un texte vide n'est pas recréé
+        self.assertEqual(self.culte.bienvenue_html, "")
+
+    def test_lecteur_ne_peut_pas_modifier(self):
+        self.client.force_login(self.lecteur)
+        self.assertEqual(self.client.post(self.url, {"contenu": "x"}).status_code, 403)

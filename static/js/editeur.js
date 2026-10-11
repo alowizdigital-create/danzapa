@@ -33,6 +33,14 @@
     return `/cultes/${espace().dataset.culte}/chants/${chant}/${suite}`;
   }
 
+  // La diapo de bienvenue s'édite comme un chant d'une seule diapo, identifiée « bienvenue ».
+  const BIENVENUE = "bienvenue";
+
+  function urlDiapo(chant, piece) {
+    if (chant === BIENVENUE) return `/cultes/${espace().dataset.culte}/bienvenue/`;
+    return urlChant(chant, `diapos/${piece}/`);
+  }
+
   // ------------------------------------------------------------ Sélection
 
   function selectionner(numero, { focus = false } = {}) {
@@ -122,9 +130,12 @@
     document.querySelectorAll("[data-en-edition]").forEach((b) => {
       const pourDiapo = b.matches("[data-format], [data-diapo-reglage], [data-ouvrir-couleurs], [data-animation-choix], [data-vitesse-animation], [data-animation-apercu], [data-animation-chant], [data-taille-diapo], [data-police-diapo]")
         || ["dupliquer", "haut", "bas", "supprimer"].includes(b.dataset.diapoAction);
-      b.disabled = !edition || (pourDiapo && !surPiece);
+      // Diapo de bienvenue : une seule diapo, pas d'actions « chant » (ajouter, déplacer, à tout le chant…).
+      const propreAuChant = edition === BIENVENUE && b.matches("[data-diapo-action], [data-animation-chant]");
+      b.disabled = !edition || (pourDiapo && !surPiece) || propreAuChant;
     });
-    document.querySelectorAll('[data-chant-action="editer"][data-hors-edition]').forEach((b) => (b.disabled = !!edition || !chant));
+    document.querySelectorAll("[data-fond-chant]").forEach((b) => (b.hidden = edition === BIENVENUE));
+    document.querySelectorAll('[data-chant-action="editer"][data-hors-edition]').forEach((b) => (b.disabled = !!edition || !(b.dataset.chant || chant)));
     afficherReglages();
 
     const e = espace();
@@ -294,7 +305,7 @@
     if (!envoi) return file;
     file = file
       .then(() =>
-        fetch(urlChant(envoi.chant, `diapos/${envoi.piece}/`), {
+        fetch(urlDiapo(envoi.chant, envoi.piece), {
           method: "POST",
           body: envoi.corps,
           headers: { "X-CSRFToken": jeton() },
@@ -424,7 +435,7 @@
   async function actionDiapo(action) {
     const g = grande();
     const chant = edition;
-    if (!chant) return;
+    if (!chant || chant === BIENVENUE) return;
     await sauverMaintenant();
     const piece = g.dataset.chant === chant ? g.dataset.piece : "";
     const options = { target: "#espace", swap: "outerHTML" };
@@ -531,7 +542,7 @@
 
   async function animationPourToutLeChant() {
     const g = grande();
-    if (!edition || !g) return;
+    if (!edition || edition === BIENVENUE || !g) return;
     await sauverMaintenant();
     htmx.ajax("POST", urlChant(edition, "animation/"), {
       target: "#espace",
@@ -625,7 +636,7 @@
 
   async function fondPourToutLeChant() {
     const g = grande();
-    if (!edition || !g) return;
+    if (!edition || edition === BIENVENUE || !g) return;
     await sauverMaintenant();
     htmx.ajax("POST", urlChant(edition, "fond/"), {
       target: "#espace",
@@ -714,7 +725,7 @@
     const envoi = donneesDiapo();
     if (!envoi) return;
     envoi.corps.append("csrfmiddlewaretoken", jeton());
-    navigator.sendBeacon(urlChant(envoi.chant, `diapos/${envoi.piece}/`), envoi.corps);
+    navigator.sendBeacon(urlDiapo(envoi.chant, envoi.piece), envoi.corps);
   });
 
   // ------------------------------------------------------------ Clics
@@ -791,6 +802,12 @@
     const entete = evt.target.closest(".groupe-entete");
     if (entete && !edition) {
       ouvrirProprietes(entete.closest(".groupe").dataset.element);
+      return;
+    }
+    // Double-clic sur la grande diapo : la modifier (chant ou bienvenue).
+    const g = evt.target.closest("#diapo-grande");
+    if (g && !edition && g.dataset.chant && document.querySelector("[data-format]")) {
+      ouvrirEdition(g.dataset.chant);
       return;
     }
     const vignette = evt.target.closest(".vignette");

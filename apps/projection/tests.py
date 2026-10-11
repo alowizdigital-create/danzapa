@@ -142,7 +142,7 @@ class ExportTests(TestCase):
 
     def test_textes_majuscules_et_numeros(self):
         diapositives = list(ouvrir(export.exporter(self.culte)).slides)
-        self.assertEqual(textes(diapositives[0]), ["BIENVENUS", "DANS LA", "MAISON DU SEIGNEUR"])
+        self.assertEqual(textes(diapositives[0]), ["Bienvenus", "dans la", "maison du Seigneur"])  # texte simple
         self.assertEqual(textes(diapositives[1]), ["CANTIQUE D'ENTRÉE : SANS ATTENDRE JE VEUX TENDRE"])
         self.assertEqual(textes(diapositives[2]), ["1. Sans attendre", "Je veux tendre", "Au bonheur promis"])
 
@@ -249,7 +249,7 @@ class ExportTests(TestCase):
                         except (ValueError, zlib.error):
                             pass  # autre encodage (images…)
                 self.assertIn(b"attendre", pages)
-                self.assertIn(b"BIENVENUS", pages)
+                self.assertIn(b"Bienvenus", pages)
         pdf.fichiers_de_polices.cache_clear()
         pdf.famille.cache_clear()
 

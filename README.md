@@ -84,6 +84,10 @@ danzapa/
 5. ✅ **Mode projection** : plein écran, clavier, vue présentateur.
 6. **Module Bible** : import d'une version libre de droits, recherche, projection de versets.
 
+## Diapo de bienvenue
+
+C'est un texte simple, modifiable directement sur la diapo, comme une diapo de chant : double-clic dessus (ou onglet **Création → Modifier la diapo de bienvenue**), puis taper. Gras, couleur, police, taille, interligne, alignement, fond et animation s'appliquent comme ailleurs. Vide, elle reste dans l'éditeur mais n'est ni projetée ni exportée.
+
 ## Animations de texte
 
 Onglet **Animations** de l'éditeur, en mode « Modifier le chant » : chaque diapo peut faire apparaître son texte en **Fondu**, **Glisser vers le haut**, **Zoom**, **Ligne par ligne** ou **Machine à écrire**, à la vitesse Rapide, Normale ou Lente. **Aperçu** rejoue l'effet, **À tout le chant** l'applique à toutes les diapos du chant. Une ✦ marque les vignettes animées. L'effet se joue à l'arrivée de la diapo en projection, et il est repris dans l'export PowerPoint (« Machine à écrire » y devient un fondu).
@@ -168,7 +172,7 @@ Dans **Cultes**, choisissez la date et cliquez sur **Créer**. L'éditeur s'ouvr
 - **Nouvelle diapo** : texte libre (annonces, lecture…). Une ligne vide sépare deux diapos.
 - Les vignettes à gauche sont regroupées par chant. Faites glisser l'en-tête d'un chant pour le déplacer entier, ou utilisez **Monter** / **Descendre**.
 - Sous la diapo : moment, titre / tags / auteur du chant, **Modifier le chant**, **Masquer**, **Retirer du culte**.
-- **Création** : texte de la diapo de bienvenue, thème, et nombre de lignes par diapo utilisé quand on colle des paroles (4 par défaut ; 6 lignes donnent 3 + 3).
+- **Création** : bouton « Modifier la diapo de bienvenue », thème, et nombre de lignes par diapo utilisé quand on colle des paroles (4 par défaut ; 6 lignes donnent 3 + 3).
 - **Fichier** → **Dupliquer** : copie tout le culte sur une autre date, pratique d'un dimanche à l'autre.
 - **Affichage** ou barre d'état : vue normale ou trieuse de diapositives. Les flèches du clavier passent d'une diapo à l'autre.
 
@@ -185,10 +189,10 @@ Chaque modification est enregistrée aussitôt (« ✓ Enregistré » en haut à
   - couleur du texte ;
   - polices et tailles des paroles et des titres ;
   - titres en majuscules ou non ;
-  - couleur du bandeau de bienvenue, ou une image qui remplace toute la diapo de bienvenue.
+  - une image qui remplace toute la diapo de bienvenue (facultative).
 
   L'aperçu se met à jour pendant la saisie.
-- Le thème **Classique** reproduit la présentation actuelle : paroles blanches en gras sur fond noir, titres en majuscules, bandeau gris pour la bienvenue. Il est utilisé par défaut et ne peut pas être supprimé.
+- Le thème **Classique** reproduit la présentation actuelle : paroles blanches en gras sur fond noir, titres en majuscules. Il est utilisé par défaut et ne peut pas être supprimé.
 - Les polices proposées existent sur Windows et Mac, pour que le fichier s'affiche comme prévu sur l'ordinateur de projection.
 
 En production, les images des thèmes (dossier `media/`) doivent être servies par l'hébergeur ; en développement, Django s'en charge.

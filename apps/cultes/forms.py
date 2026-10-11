@@ -3,7 +3,8 @@ from django.forms import modelform_factory
 
 from .models import Culte, ElementCulte
 
-CHAMPS_PARAMETRES = ["titre", "statut", "texte_bienvenue", "lignes_par_diapo", "theme"]
+# Le texte de bienvenue se modifie sur la diapo (vue enregistrer_bienvenue).
+CHAMPS_PARAMETRES = ["titre", "statut", "lignes_par_diapo", "theme"]
 
 
 class NouveauCulteForm(forms.ModelForm):

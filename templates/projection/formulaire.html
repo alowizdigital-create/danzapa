@@ -61,7 +61,6 @@
     const s = apercu.style;
     s.setProperty("--fond-couleur", val("couleur_fond").value);
     s.setProperty("--texte-couleur", val("couleur_texte").value);
-    s.setProperty("--bandeau", val("couleur_bandeau").value);
     s.setProperty("--police", piles[val("police").value]);
     s.setProperty("--police-titres", piles[val("police_titres").value]);
     s.setProperty("--poids", val("gras").checked ? "700" : "400");
@@ -80,7 +79,7 @@
     const chasseTitres = chasses[val("police_titres").value] || 0.6;
     ajuster(apercu.querySelector(".diapo-paroles"), paroles, 864, 475.2, chassePar);
     ajuster(apercu.querySelector(".diapo-titre"), titre, 864, 475.2, chasseTitres * (majuscules ? 1.3 : 1));
-    ajuster(apercu.querySelector(".diapo-bienvenue"), Math.round(paroles * 1.3), 757.9, 223.3, chasseTitres * 1.35);
+    ajuster(apercu.querySelector(".diapo-bienvenue"), Math.round(paroles * 1.3), 864, 475.2, chassePar);
     image("image_fond", "--fond-image");
     image("image_bienvenue", "--bienvenue-image");
     if (form.elements["image_bienvenue-clear"] && form.elements["image_bienvenue-clear"].checked) s.removeProperty("--bienvenue-image");

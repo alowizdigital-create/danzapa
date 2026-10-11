@@ -18,6 +18,7 @@ urlpatterns = [
     path("<uuid:pk>/ajouter-chant/", views.ajouter_chant, name="ajouter_chant"),
     path("<uuid:pk>/ajouter-texte/", views.ajouter_texte, name="ajouter_texte"),
     path("<uuid:pk>/ajouter-image/", views.ajouter_image, name="ajouter_image"),
+    path("<uuid:pk>/bienvenue/", views.enregistrer_bienvenue, name="enregistrer_bienvenue"),
     path("<uuid:pk>/creer-chant/", views.creer_chant, name="creer_chant"),
     path("<uuid:pk>/chants/<uuid:chant_pk>/infos/", views.infos_chant, name="infos_chant"),
     path("<uuid:pk>/chants/<uuid:chant_pk>/supprimer/", views.supprimer_chant_bibliotheque, name="supprimer_chant"),

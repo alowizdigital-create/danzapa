@@ -380,20 +380,7 @@ a.carte-lien:hover { border-color: var(--accent); }
   text-transform: var(--casse-titre, uppercase);
 }
 .diapo-bienvenue { background-image: var(--bienvenue-image, var(--fond-image, none)); }
-.diapo-bienvenue .diapo-contenu {
-  width: 84%;
-  min-height: 44%;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  background: var(--bandeau, #8f8f8f);
-  box-shadow: 0 -1.2cqw 0 -0.8cqw #c8c8c8, 0 1.2cqw 0 -0.8cqw #c8c8c8;
-  font-family: var(--police-titres, Georgia, serif);
-  font-weight: 700;
-  font-style: italic;
-  text-transform: uppercase;
-  line-height: 1.05;
-}
+/* Bienvenue : texte simple, comme une diapo de chant (modifiable sur place). */
 /* Une image de bienvenue remplace toute la diapo, texte compris. */
 .avec-image-bienvenue .diapo-bienvenue .diapo-contenu { visibility: hidden; }
 .diapo-masquee { opacity: 0.35; }

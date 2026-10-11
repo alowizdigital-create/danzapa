@@ -130,9 +130,6 @@ class Exporteur:
         self.fond(diapo.couleur_fond)
         if diapo.type == d.BIENVENUE and self.image_bienvenue:
             self.image_pleine_page(self.image_bienvenue)
-        elif diapo.type == d.BIENVENUE:
-            self.bandeau()
-            self.texte(diapo, self.theme.police_titres, gras=True, italique=True)
         elif diapo.type == d.TITRE:
             self.texte(diapo, self.theme.police_titres, gras=self.theme.gras)
         elif diapo.type == d.IMAGE:
@@ -153,14 +150,6 @@ class Exporteur:
 
     def image_pleine_page(self, contenu):
         self.page.drawImage(ImageReader(io.BytesIO(contenu)), 0, 0, LARGEUR, HAUTEUR, mask="auto")
-
-    def bandeau(self):
-        gauche = (LARGEUR - rendu.LARGEUR_BANDEAU_PT) / 2
-        haut = (HAUTEUR - rendu.HAUTEUR_BANDEAU_PT) / 2
-        filet = 4
-        self.rectangle(gauche, haut - filet * 2, rendu.LARGEUR_BANDEAU_PT, filet, "#c8c8c8")
-        self.rectangle(gauche, haut, rendu.LARGEUR_BANDEAU_PT, rendu.HAUTEUR_BANDEAU_PT, self.theme.couleur_bandeau)
-        self.rectangle(gauche, haut + rendu.HAUTEUR_BANDEAU_PT + filet, rendu.LARGEUR_BANDEAU_PT, filet, "#c8c8c8")
 
     def image(self, diapo):
         lue = lire_image_de_diapo(diapo)
