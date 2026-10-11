@@ -1,8 +1,13 @@
 /* Danzapa : style de base, inspiré de PowerPoint Web. */
 
 :root {
-  --accent: #c43e1c;          /* rouge PowerPoint */
-  --accent-fonce: #a33416;
+  /* Charte Danzapa : bleu nuit (fond de la diapo de bienvenue) */
+  --accent: #0b1f4d;
+  --accent-fonce: #061433;
+  --accent-clair: #e3e8f3;    /* fonds actifs, survols */
+  --accent-bord: #b9c4dd;
+  --accent-pale: #f2f5fb;
+  --or: #ffd700;              /* touche dorée, comme le texte de bienvenue */
   --fond: #f3f2f1;
   --surface: #ffffff;
   --texte: #242424;
@@ -54,7 +59,7 @@ body {
   height: 1.75rem;
   border-radius: 50%;
   background: var(--accent);
-  color: #fff;
+  color: var(--or);
   font-weight: 700;
 }
 .logo-grand { font-size: 1.5rem; justify-content: center; width: 100%; }
@@ -225,7 +230,7 @@ a.carte-lien:hover { border-color: var(--accent); }
   font-size: 0.75rem;
   padding: 0.1rem 0.5rem;
   border-radius: 999px;
-  background: #fbe9e4;
+  background: var(--accent-clair);
   color: var(--accent-fonce);
   text-decoration: none;
   margin-left: 0.3rem;
@@ -491,7 +496,7 @@ input.titre-culte:hover, input.titre-culte:focus { border-color: var(--bordure);
   cursor: pointer;
 }
 .outil:hover:not(:disabled) { background: var(--surface); border-color: var(--bordure); }
-.outil.actif { background: #fbe9e4; border-color: #f0c4b8; }
+.outil.actif { background: var(--accent-clair); border-color: var(--accent-bord); }
 .outil:disabled { opacity: 0.4; cursor: default; }
 .outil-icone { font-size: 1.25rem; line-height: 1.2; color: var(--accent); }
 .ruban-form label { display: flex; flex-direction: column; gap: 0.2rem; font-size: 0.78rem; }
@@ -526,7 +531,7 @@ input.titre-culte:hover, input.titre-culte:focus { border-color: var(--bordure);
 .groupe-nom { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .poignee { color: #a19f9d; }
 .groupe-masque .groupe-nom { text-decoration: line-through; }
-.sortable-ghost { opacity: 0.4; background: #fbe9e4; }
+.sortable-ghost { opacity: 0.4; background: var(--accent-clair); }
 .vignette {
   display: flex;
   align-items: flex-start;
@@ -565,7 +570,7 @@ input.titre-culte:hover, input.titre-culte:focus { border-color: var(--bordure);
 .barre-etat-droite { margin-left: auto; display: flex; gap: 0.25rem; }
 .bouton-vue { background: none; border: 1px solid transparent; border-radius: 4px; font: inherit; padding: 0.15rem 0.5rem; cursor: pointer; color: inherit; }
 .bouton-vue:hover { background: var(--fond); }
-.bouton-vue.actif { background: #fbe9e4; border-color: #f0c4b8; color: var(--texte); }
+.bouton-vue.actif { background: var(--accent-clair); border-color: var(--accent-bord); color: var(--texte); }
 
 /* Trieuse de diapositives : toutes les vignettes en grille */
 .vue-trieuse { grid-template-columns: 1fr; }
@@ -615,7 +620,7 @@ input.titre-culte:hover, input.titre-culte:focus { border-color: var(--bordure);
   font: inherit;
   cursor: pointer;
 }
-.resultat:hover, .resultat:focus { background: #fbe9e4; outline: none; }
+.resultat:hover, .resultat:focus { background: var(--accent-clair); outline: none; }
 .resultats-chants .vide { padding: 0.75rem; margin: 0; }
 
 /* Téléphone : vignettes en bandeau horizontal au-dessus de la diapo */
@@ -706,7 +711,7 @@ input.titre-culte:hover, input.titre-culte:focus { border-color: var(--bordure);
 .diapo-editable .diapo-contenu:empty::before { content: "Tapez les paroles de cette diapo…"; opacity: 0.5; }
 
 
-.groupe-edition { box-shadow: 0 0 0 2px var(--accent); background: #fff7f5; }
+.groupe-edition { box-shadow: 0 0 0 2px var(--accent); background: var(--accent-pale); }
 .groupe-edition .groupe-entete { color: var(--accent); font-weight: 600; }
 
 .outil-carre { min-width: 2.2rem; max-width: none; justify-content: center; font-size: 1rem; padding: 0.35rem 0.5rem; }
@@ -808,7 +813,7 @@ body:not(.mode-edition) .cache-hors-edition { display: none; }
 .outils-police input { -moz-appearance: textfield; appearance: textfield; }
 .outils-police input.taille-auto { color: var(--texte-doux); font-style: italic; }
 .outils-police :disabled { opacity: 0.5; }
-.outil-actif { background: var(--accent-clair, #fde7e0); box-shadow: inset 0 0 0 1px var(--accent); }
+.outil-actif { background: var(--accent-clair); box-shadow: inset 0 0 0 1px var(--accent); }
 
 /* ================================================================
    Projection plein écran (cultes/projection.html)

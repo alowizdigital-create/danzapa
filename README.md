@@ -192,6 +192,7 @@ Chaque modification est enregistrée aussitôt (« ✓ Enregistré » en haut à
   - une image qui remplace toute la diapo de bienvenue (facultative).
 
   L'aperçu se met à jour pendant la saisie.
+- Charte de l'application : bleu nuit `#0b1f4d` avec une touche dorée `#ffd700`.
 - Le thème **Classique** reproduit la présentation actuelle : paroles blanches en gras sur fond noir, titres en majuscules. Il est utilisé par défaut et ne peut pas être supprimé.
 - Les polices proposées existent sur Windows et Mac, pour que le fichier s'affiche comme prévu sur l'ordinateur de projection.
 
