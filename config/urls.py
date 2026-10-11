@@ -4,12 +4,15 @@ from django.urls import include, path, re_path
 from django.views.static import serve
 
 from apps.comptes.views import accueil, sante
+from apps.cultes.partage import suivre
 
 urlpatterns = [
     path("", accueil, name="accueil"),
     path("sante/", sante, name="sante"),
     path("comptes/", include("apps.comptes.urls")),
     path("cultes/", include("apps.cultes.urls")),
+    # Page publique « Suivre le culte » (sans compte), lien secret partagé.
+    path("suivre/<uuid:jeton>/", suivre, name="suivre"),
     path("themes/", include("apps.projection.urls")),
     path("admin/", admin.site.urls),
 ]

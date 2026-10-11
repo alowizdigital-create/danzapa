@@ -1,6 +1,6 @@
 from django.urls import path
 
-from . import views
+from . import partage, views
 
 app_name = "cultes"
 
@@ -11,6 +11,7 @@ urlpatterns = [
     path("<uuid:pk>/export.pptx", views.exporter_pptx, name="export_pptx"),
     path("<uuid:pk>/export.pdf", views.exporter_pdf, name="export_pdf"),
     path("<uuid:pk>/projection/", views.projection, name="projection"),
+    path("<uuid:pk>/partage/", partage.partager, name="partager"),
     path("<uuid:uuid>/supprimer/", views.CulteSuppression.as_view(), name="suppression"),
     path("<uuid:pk>/dupliquer/", views.dupliquer, name="dupliquer"),
     path("<uuid:pk>/parametres/", views.parametres, name="parametres"),

@@ -1,0 +1,35 @@
+{# Contenu de la fenêtre « Partager » : lien public du culte (apps/cultes/partage.py). #}
+<div id="partage-contenu">
+  {% if lien_partage %}
+    <p>Toute personne qui a ce lien peut <strong>suivre les chants du culte sur son téléphone</strong>, sans compte, et les faire défiler à son rythme.</p>
+    <div class="partage-lien">
+      <input type="text" value="{{ lien_partage }}" readonly aria-label="Lien à partager" data-lien-partage>
+      <button type="button" class="bouton-principal" data-copier="{{ lien_partage }}">Copier</button>
+    </div>
+    <div class="partage-actions">
+      <button type="button" class="bouton-secondaire" data-partager-natif="{{ lien_partage }}" data-titre="{{ culte.titre }}" hidden>Partager…</button>
+      <a class="bouton-secondaire" href="https://wa.me/?text={{ culte.titre|urlencode }}%20%3A%20{{ lien_partage|urlencode }}" target="_blank" rel="noopener">WhatsApp</a>
+      <a class="bouton-secondaire" href="{{ lien_partage }}" target="_blank" rel="noopener">Ouvrir la page</a>
+    </div>
+    <div class="partage-qr">
+      {{ qr_partage }}
+      <p class="aide">À projeter ou imprimer : on scanne ce code avec l'appareil photo du téléphone.</p>
+    </div>
+    {% if peut_modifier %}
+    <div class="partage-gestion">
+      <button type="button" class="bouton-lien" hx-post="{% url 'cultes:partager' culte.uuid %}" hx-vals='{"action": "renouveler"}' hx-target="#partage-contenu" hx-swap="outerHTML"
+              hx-confirm="Créer un nouveau lien ? L'ancien lien ne marchera plus.">↻ Nouveau lien</button>
+      <button type="button" class="bouton-lien bouton-retirer" hx-post="{% url 'cultes:partager' culte.uuid %}" hx-vals='{"action": "desactiver"}' hx-target="#partage-contenu" hx-swap="outerHTML"
+              hx-confirm="Désactiver le lien ? Les personnes qui l'ont ne pourront plus ouvrir la page.">Désactiver le lien</button>
+    </div>
+    {% endif %}
+  {% else %}
+    <p>Créez un lien pour que les membres de l'église suivent <strong>les chants et les textes du culte sur leur téléphone</strong>, sans compte : ils font défiler la page à leur rythme.</p>
+    <p class="aide">Le lien est secret : seules les personnes qui le reçoivent peuvent ouvrir la page. Vous pourrez le désactiver à tout moment.</p>
+    {% if peut_modifier %}
+      <button type="button" class="bouton-principal" hx-post="{% url 'cultes:partager' culte.uuid %}" hx-vals='{"action": "activer"}' hx-target="#partage-contenu" hx-swap="outerHTML">Créer le lien de partage</button>
+    {% else %}
+      <p class="aide">Seule une personne qui peut modifier le culte peut créer le lien.</p>
+    {% endif %}
+  {% endif %}
+</div>

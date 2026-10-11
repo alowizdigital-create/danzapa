@@ -21,6 +21,7 @@ from apps.projection import pdf, pptx, rendu
 from apps.projection.models import POLICES, Theme
 
 from . import diapos
+from .partage import contexte_partage
 from .forms import (
     AjoutChantForm,
     DuplicationForm,
@@ -181,6 +182,7 @@ def editeur(request, pk):
     contexte = contexte_espace(request, culte)
     # Le premier chant d'un culte est en général le cantique d'entrée.
     contexte["moment_suggere"] = "" if contexte["a_des_elements"] else MOMENT_PAR_DEFAUT
+    contexte.update(contexte_partage(request, culte))
     contexte["form_duplication"] = DuplicationForm(
         initial={"date": prochain_dimanche(max(culte.date, timezone.localdate()) + timedelta(days=1))}
     )

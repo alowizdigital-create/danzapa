@@ -1,0 +1,63 @@
+{% load static %}<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#0b1f4d">
+  <title>{{ culte.titre }} · Chants</title>
+  <link rel="icon" href="{% static 'img/favicon.svg' %}" type="image/svg+xml">
+  <link rel="stylesheet" href="{% static 'css/suivre.css' %}">
+  <script src="{% static 'js/suivre.js' %}" defer></script>
+</head>
+{# Page publique « Suivre le culte » : rien que les chants et textes, pour les téléphones (apps/cultes/partage.py). #}
+<body>
+  <header class="barre">
+    <a class="marque" href="#haut" aria-label="Haut de la page"><span class="logo">D</span></a>
+    <div class="barre-titre">
+      <strong>{{ culte.titre }}</strong>
+      <span>{{ culte.date|date:"l j F Y"|capfirst }}</span>
+    </div>
+    <button type="button" class="bouton" data-taille="-1" aria-label="Texte plus petit">A−</button>
+    <button type="button" class="bouton" data-taille="1" aria-label="Texte plus grand">A+</button>
+    <button type="button" class="bouton" data-mode aria-label="Mode clair ou sombre">◐</button>
+  </header>
+
+  <main id="haut">
+    {% if bienvenue %}<section class="bienvenue">{{ bienvenue }}</section>{% endif %}
+
+    {% if parties %}
+    <nav class="sommaire" aria-label="Déroulé du culte">
+      <h2>Déroulé</h2>
+      <ol>
+        {% for partie in parties %}
+          <li><a href="#{{ partie.ancre }}">{% if partie.moment %}<span class="moment">{{ partie.moment }}</span>{% endif %}{{ partie.titre|default:"Image" }}</a></li>
+        {% endfor %}
+      </ol>
+    </nav>
+    {% else %}
+      <p class="vide">Le déroulé du culte n'est pas encore prêt. Revenez un peu plus tard.</p>
+    {% endif %}
+
+    {% for partie in parties %}
+      <article class="partie partie-{{ partie.type }}" id="{{ partie.ancre }}">
+        <header>
+          {% if partie.moment %}<p class="moment">{{ partie.moment }}</p>{% endif %}
+          {% if partie.titre %}<h2>{{ partie.titre }}</h2>{% endif %}
+          {% if partie.auteur %}<p class="auteur">{{ partie.auteur }}</p>{% endif %}
+        </header>
+        {% if partie.type == "image" %}
+          {% if partie.image_url %}<img src="{{ partie.image_url }}" alt="{{ partie.titre }}" loading="lazy">{% endif %}
+        {% elif partie.type == "chant" %}
+          {% for couplet in partie.couplets %}<div class="couplet">{{ couplet }}</div>{% endfor %}
+        {% else %}
+          {% for paragraphe in partie.couplets %}<div class="couplet">{% for ligne in paragraphe %}<div>{{ ligne }}</div>{% endfor %}</div>{% endfor %}
+        {% endif %}
+        <a class="retour" href="#haut">↑ Déroulé</a>
+      </article>
+    {% endfor %}
+  </main>
+
+  <footer class="pied">Danzapa · <button type="button" class="lien" data-actualiser>Actualiser</button> pour voir les derniers changements</footer>
+</body>
+</html>

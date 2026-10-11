@@ -1,0 +1,115 @@
+/* « Suivre le culte » : page publique pour téléphone (templates/cultes/suivre.html).
+   Charte Danzapa : bleu nuit + doré. Sombre par défaut (salle souvent peu éclairée). */
+:root {
+  --fond: #0b1f4d;
+  --surface: #12295e;
+  --texte: #ffffff;
+  --doux: #b9c4dd;
+  --or: #ffd700;
+  --trait: rgba(255, 255, 255, 0.14);
+  --taille: 1.15rem;
+  color-scheme: dark;
+}
+body.clair {
+  --fond: #f2f5fb;
+  --surface: #ffffff;
+  --texte: #14213d;
+  --doux: #4a5878;
+  --or: #8a6d00;
+  --trait: #dfe5f1;
+  color-scheme: light;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; scroll-padding-top: 4.5rem; }
+body {
+  margin: 0;
+  background: var(--fond);
+  color: var(--texte);
+  font: var(--taille) / 1.55 "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
+  -webkit-text-size-adjust: 100%;
+}
+
+.barre {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 0.75rem;
+  padding-top: max(0.55rem, env(safe-area-inset-top));
+  background: var(--surface);
+  border-bottom: 1px solid var(--trait);
+  font-size: 1rem;
+}
+.marque { text-decoration: none; }
+.logo {
+  display: inline-grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  background: #0b1f4d;
+  color: #ffd700;
+  font-weight: 700;
+  box-shadow: 0 0 0 1px var(--trait);
+}
+.barre-titre { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.2; }
+.barre-titre strong { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.barre-titre span { color: var(--doux); font-size: 0.8rem; }
+.bouton {
+  min-width: 2.4rem;
+  height: 2.4rem;
+  border: 1px solid var(--trait);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--texte);
+  font: inherit;
+  font-weight: 600;
+}
+
+main { max-width: 42rem; margin: 0 auto; padding: 1rem 1rem 3rem; }
+
+.bienvenue {
+  margin: 0.5rem 0 1.25rem;
+  padding: 1.25rem 1rem;
+  border-radius: 12px;
+  background: var(--surface);
+  text-align: center;
+  font-size: 1.15em;
+  font-weight: 600;
+}
+
+.sommaire { margin-bottom: 1.5rem; }
+.sommaire h2, .partie h2 { margin: 0; font-size: 1.25em; line-height: 1.3; }
+.sommaire h2 { color: var(--doux); font-size: 0.85em; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.5rem; }
+.sommaire ol { list-style: none; margin: 0; padding: 0; }
+.sommaire a {
+  display: block;
+  padding: 0.65rem 0.75rem;
+  margin-bottom: 0.4rem;
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--texte);
+  text-decoration: none;
+  font-weight: 600;
+}
+.sommaire .moment { display: block; font-weight: 400; font-size: 0.8em; }
+
+.moment { margin: 0 0 0.15rem; color: var(--or); font-size: 0.85em; text-transform: uppercase; letter-spacing: 0.04em; }
+.auteur { margin: 0.15rem 0 0; color: var(--doux); font-size: 0.85em; }
+
+.partie { padding: 1.5rem 0 1rem; border-top: 1px solid var(--trait); }
+.partie header { margin-bottom: 0.9rem; }
+.couplet { margin-bottom: 1.1rem; }
+.couplet div { min-height: 1em; }
+.partie img { display: block; width: 100%; height: auto; border-radius: 10px; }
+.retour { display: inline-block; margin-top: 0.25rem; color: var(--doux); font-size: 0.85em; text-decoration: none; }
+
+/* Couleurs choisies dans l'éditeur : gardées en mode sombre, neutralisées en mode clair
+   (texte jaune ou blanc illisible sur fond clair). */
+body.clair .couplet [style*="color"], body.clair .bienvenue [style*="color"] { color: inherit !important; }
+
+.vide { color: var(--doux); text-align: center; margin-top: 3rem; }
+.pied { padding: 1rem; text-align: center; color: var(--doux); font-size: 0.8rem; }
+.lien { border: none; background: none; color: inherit; font: inherit; text-decoration: underline; padding: 0; }

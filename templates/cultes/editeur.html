@@ -31,6 +31,7 @@
   <span class="date-culte masque-mobile">{{ culte.date|date:"l j F Y"|capfirst }}</span>
   <span id="indicateur" class="indicateur" aria-live="polite">{% if peut_modifier %}✓ Enregistré{% else %}Lecture seule{% endif %}</span>
   <span class="actions-culte">
+    <button type="button" class="bouton-exporter" data-dialogue="dlg-partage" title="Lien pour suivre les chants sur téléphone, sans compte">🔗 Partager</button>
     <a class="bouton-exporter" href="{% url 'cultes:export_pdf' culte.uuid %}" download title="Télécharger le culte en PDF (une diapo par page)">↓ PDF</a>
     <a class="bouton-exporter" href="{% url 'cultes:export_pptx' culte.uuid %}" download title="Exporter le culte en PowerPoint (.pptx)">↓ PPTX</a>
     <a class="bouton-projeter" href="{% url 'cultes:projection' culte.uuid %}" data-projeter title="Projeter (F5) : diapo seule sur le projecteur, diapo suivante sur cet ordinateur. Maj+F5 : depuis la diapo actuelle">▶ Projeter</a>
@@ -63,6 +64,10 @@
       <a class="outil" href="{% url 'cultes:export_pptx' culte.uuid %}" download><span class="outil-icone">↓</span>Exporter en PowerPoint</a>
       <a class="outil" href="{% url 'cultes:export_pdf' culte.uuid %}" download><span class="outil-icone">↓</span>Exporter en PDF</a>
       <span class="ruban-libelle">Exporter</span>
+    </div>
+    <div class="ruban-groupe">
+      <button type="button" class="outil" data-dialogue="dlg-partage"><span class="outil-icone">🔗</span>Partager<br>(téléphones)</button>
+      <span class="ruban-libelle">Partager</span>
     </div>
     {% if perms.cultes.delete_culte %}
     <div class="ruban-groupe">
@@ -278,6 +283,14 @@
   <button type="button" class="palette-ligne palette-chant" data-fond-chant>Appliquer ce fond à tout le chant</button>
 </div>
 {% endif %}
+
+<dialog id="dlg-partage" class="dialogue dialogue-partage" aria-labelledby="dlg-partage-titre">
+  <div class="dialogue-entete">
+    <h2 id="dlg-partage-titre">Suivre le culte sur téléphone</h2>
+    <button type="button" class="bouton-lien" data-fermer>✕</button>
+  </div>
+  {% include "cultes/_partage.html" %}
+</dialog>
 
 <dialog id="dlg-chant" class="dialogue" aria-labelledby="dlg-chant-titre">
   <div class="dialogue-entete">

@@ -84,6 +84,10 @@ danzapa/
 5. ✅ **Mode projection** : plein écran, clavier, vue présentateur.
 6. **Module Bible** : import d'une version libre de droits, recherche, projection de versets.
 
+## Suivre le culte sur téléphone (sans compte)
+
+Bouton **🔗 Partager** de l'éditeur (ou onglet Fichier) : **Créer le lien de partage**, puis le copier, l'envoyer par WhatsApp ou projeter le **QR code**. Toute personne qui a le lien ouvre, sans compte, une page pour téléphone avec le mot de bienvenue, le déroulé et **les chants et textes du culte**, qu'elle fait défiler à son rythme (taille du texte A−/A+, mode clair ou sombre). Les éléments masqués n'y figurent pas ; « Actualiser » montre les derniers changements. Le lien est secret : **Nouveau lien** rend l'ancien inutilisable, **Désactiver le lien** ferme la page.
+
 ## Diapo de bienvenue
 
 C'est un texte simple, modifiable directement sur la diapo, comme une diapo de chant : double-clic dessus (ou onglet **Création → Modifier la diapo de bienvenue**), puis taper. Gras, couleur, police, taille, interligne, alignement, fond et animation s'appliquent comme ailleurs. Vide, elle reste dans l'éditeur mais n'est ni projetée ni exportée.

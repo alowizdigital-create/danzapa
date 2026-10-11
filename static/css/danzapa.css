@@ -976,3 +976,16 @@ body.presentateur {
 }
 .liste-valeurs button:hover { border-color: var(--accent); color: var(--accent); }
 .liste-tailles { max-height: 12rem; overflow-y: auto; }
+
+/* Fenêtre Partager (lien public « Suivre le culte ») */
+.dialogue-partage { width: min(30rem, 94vw); }
+.partage-lien { display: flex; gap: 0.4rem; margin: 0.75rem 0 0.5rem; }
+.partage-lien input { flex: 1; min-width: 0; font: inherit; font-size: 0.85rem; padding: 0.4rem 0.5rem; border: 1px solid var(--bordure); border-radius: 4px; background: var(--accent-pale); }
+.partage-lien .bouton-principal { margin-top: 0; }
+.partage-actions { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.partage-actions .bouton-secondaire { text-decoration: none; font-size: 0.85rem; padding: 0.35rem 0.7rem; }
+.partage-qr { text-align: center; margin-top: 0.75rem; }
+.partage-qr svg { width: 11rem; height: auto; }
+.partage-gestion { display: flex; justify-content: space-between; margin-top: 0.5rem; border-top: 1px solid var(--bordure); padding-top: 0.5rem; }
+/* La date est déjà dans le titre du culte : la masquer quand la barre manque de place. */
+@media (max-width: 1440px) { .barre-culte .date-culte { display: none; } }

@@ -703,3 +703,63 @@ class BienvenueTests(TestCase):
     def test_lecteur_ne_peut_pas_modifier(self):
         self.client.force_login(self.lecteur)
         self.assertEqual(self.client.post(self.url, {"contenu": "x"}).status_code, 403)
+
+
+class PartageTests(TestCase):
+    """Page publique « Suivre le culte » : lien secret, sans compte."""
+
+    def setUp(self):
+        self.editeur = utilisateur("editeur", roles.EDITEUR)
+        self.lecteur = utilisateur("lecteur", roles.LECTEUR)
+        self.chant = Chant.objects.create(titre="Sans attendre je veux tendre", auteur="Trad.")
+        self.chant.remplacer_paroles(SANS_ATTENDRE)
+        self.culte = Culte.objects.create(date=date(2026, 9, 20))
+        ElementCulte.objects.create(culte=self.culte, ordre=1, type=ElementCulte.CHANT, chant=self.chant, moment="Louange")
+        ElementCulte.objects.create(culte=self.culte, ordre=2, type=ElementCulte.TEXTE, titre="Annonces", contenu="Réunion mardi")
+        ElementCulte.objects.create(culte=self.culte, ordre=3, type=ElementCulte.TEXTE, titre="Secret", contenu="Caché", masque=True)
+        self.url = reverse("cultes:partager", args=[self.culte.uuid])
+
+    def partager(self, action):
+        return self.client.post(self.url, {"action": action}, headers={"HX-Request": "true"})
+
+    def test_creer_ouvrir_sans_compte_renouveler_desactiver(self):
+        self.client.force_login(self.editeur)
+        self.assertContains(self.client.get(self.culte.get_absolute_url()), "Créer le lien de partage")
+        reponse = self.partager("activer")
+        self.culte.refresh_from_db()
+        lien = reverse("suivre", args=[self.culte.jeton_partage])
+        self.assertContains(reponse, f"http://testserver{lien}")
+        self.assertContains(reponse, "<svg")  # QR code
+        # Sans compte : la page s'ouvre, avec chants et textes, sans les éléments masqués.
+        self.client.logout()
+        page = self.client.get(lien)
+        self.assertEqual(page.status_code, 200)
+        self.assertEqual(page["X-Robots-Tag"], "noindex, nofollow")
+        for attendu in ("Sans attendre je veux tendre", "Louange", "Trad.", "Je veux tendre", "Annonces", "Réunion mardi", "Bienvenus"):
+            self.assertContains(page, attendu)
+        self.assertNotContains(page, "Caché")
+        self.assertNotContains(page, "Déconnexion")
+        # Nouveau lien : l'ancien ne marche plus ; désactivé : plus rien.
+        self.client.force_login(self.editeur)
+        self.partager("renouveler")
+        self.client.logout()
+        self.assertEqual(self.client.get(lien).status_code, 404)
+        self.client.force_login(self.editeur)
+        self.partager("desactiver")
+        self.culte.refresh_from_db()
+        self.assertIsNone(self.culte.jeton_partage)
+
+    def test_lien_inconnu_et_droits(self):
+        import uuid
+
+        self.assertEqual(self.client.get(reverse("suivre", args=[uuid.uuid4()])).status_code, 404)
+        self.client.force_login(self.lecteur)
+        self.assertEqual(self.partager("activer").status_code, 403)
+        self.client.force_login(self.editeur)
+        self.assertEqual(self.partager("pirater").status_code, 400)
+
+    def test_copie_d_un_culte_non_partagee(self):
+        self.client.force_login(self.editeur)
+        self.partager("activer")
+        self.culte.refresh_from_db()
+        self.assertIsNone(self.culte.dupliquer(date(2026, 9, 27)).jeton_partage)

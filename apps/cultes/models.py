@@ -42,6 +42,8 @@ class Culte(models.Model):
     # (alignement, taille, police, interligne, couleur_fond, animation…).
     # texte_bienvenue en est la version texte brut.
     bienvenue_html = models.TextField(blank=True)
+    # Lien public « Suivre le culte » (téléphones, sans compte) : secret, désactivable.
+    jeton_partage = models.UUIDField(null=True, blank=True, unique=True, editable=False)
     bienvenue_reglages = models.JSONField(default=dict, blank=True)
     theme = models.ForeignKey(
         "projection.Theme",

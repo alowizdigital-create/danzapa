@@ -682,6 +682,37 @@
     }
   }, true);
 
+  // ------------------------------------------------------------ Partage (lien public)
+
+  function afficherPartageNatif() {
+    document.querySelectorAll("[data-partager-natif]").forEach((b) => (b.hidden = !navigator.share));
+  }
+
+  document.addEventListener("click", async (evt) => {
+    const copier = evt.target.closest("[data-copier]");
+    if (copier) {
+      const lien = copier.dataset.copier;
+      try {
+        await navigator.clipboard.writeText(lien);
+      } catch (erreur) {
+        const champ = document.querySelector("[data-lien-partage]");
+        if (champ) {
+          champ.select();
+          document.execCommand("copy");
+        }
+      }
+      copier.textContent = "Copié ✓";
+      setTimeout(() => (copier.textContent = "Copier"), 2000);
+      return;
+    }
+    const natif = evt.target.closest("[data-partager-natif]");
+    if (natif && navigator.share) {
+      navigator.share({ title: natif.dataset.titre, url: natif.dataset.partagerNatif }).catch(() => {});
+    }
+  });
+  document.addEventListener("htmx:afterSwap", afficherPartageNatif);
+  document.addEventListener("DOMContentLoaded", afficherPartageNatif);
+
   // Projection, comme PowerPoint : sur l'ordinateur la vue présentateur (diapo
   // actuelle + suivante), sur le projecteur la diapo en cours seulement.
   // F5 : depuis le début ; Maj+F5 : depuis la diapo actuelle.
