@@ -828,20 +828,6 @@ body.projection.curseur-cache, body.projection.curseur-cache * { cursor: none; }
 .projection-fin { color: #8a8a8a; font: 1.1rem system-ui, sans-serif; }
 .projection-ecran { position: fixed; inset: 0; background: #000; z-index: 5; }
 .projection-ecran.ecran-blanc { background: #fff; }
-.projection-aide {
-  position: fixed;
-  left: 50%;
-  bottom: 2rem;
-  transform: translateX(-50%);
-  padding: 0.7rem 1.2rem;
-  border-radius: 8px;
-  background: rgba(0, 0, 0, 0.75);
-  color: #eee;
-  font: 0.95rem/1.5 system-ui, sans-serif;
-  text-align: center;
-  z-index: 6;
-}
-.projection-aide[hidden] { display: none; }
 
 /* Vue présentateur (cultes/projection_presentateur.html) */
 body.presentateur {

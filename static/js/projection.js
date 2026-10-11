@@ -78,9 +78,12 @@
     if (!presentateur) canal.postMessage({ type: "demande" });
   }
 
+  // Le navigateur n'accorde le plein écran qu'après un geste (clic ou touche) :
+  // on le demande une seule fois automatiquement, à la première interaction.
+  let pleinEcranTente = false;
+
   function pleinEcran() {
-    const aide = document.querySelector("[data-aide]");
-    if (aide) aide.hidden = true;
+    pleinEcranTente = true;
     if (!document.fullscreenElement && document.documentElement.requestFullscreen) {
       document.documentElement.requestFullscreen().catch(() => {});
     }
@@ -94,6 +97,7 @@
   document.addEventListener("keydown", (evt) => {
     if (evt.ctrlKey || evt.metaKey || evt.altKey) return;
     const touche = evt.key;
+    if (!presentateur && !pleinEcranTente && touche !== "Escape") pleinEcran();
     if (/^[0-9]$/.test(touche)) {
       saisie += touche;
       return;
@@ -149,8 +153,7 @@
       return;
     }
     // Premier clic : plein écran ; ensuite, un clic passe à la diapo suivante.
-    const aide = document.querySelector("[data-aide]");
-    if (aide && !aide.hidden) return pleinEcran();
+    if (!pleinEcranTente) return pleinEcran();
     aller(index + 1);
   });
 
