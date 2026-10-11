@@ -94,9 +94,10 @@
       <button type="button" class="outil outil-carre" data-format="bold" data-en-edition title="Gras (Ctrl+B)"><b>G</b></button>
       <button type="button" class="outil outil-carre" data-format="italic" data-en-edition title="Italique (Ctrl+I)"><i>I</i></button>
       <button type="button" class="outil outil-carre" data-format="underline" data-en-edition title="Souligné (Ctrl+U)"><u>S</u></button>
-      <label class="outil outil-carre outil-couleur" title="Couleur du texte sélectionné">
-        <span class="couleur-a">A</span><input type="color" data-couleur-texte value="#ffd700" data-en-edition>
-      </label>
+      <button type="button" class="outil outil-couleur" data-ouvrir-couleurs="texte" data-en-edition aria-haspopup="true"
+              title="Couleur du texte : sélection, ou toute la diapo si rien n'est sélectionné">
+        <span class="couleur-a">A</span><span class="trait-couleur" data-apercu="texte"></span><span class="fleche">▾</span>
+      </button>
       <button type="button" class="outil outil-carre" data-format="removeFormat" data-en-edition title="Effacer la mise en forme">⌫</button>
       <span class="ruban-libelle">Police</span>
     </div>
@@ -106,10 +107,9 @@
       <button type="button" class="outil outil-carre" data-diapo-reglage="gauche" data-en-edition title="Aligner à gauche">⇤</button>
       <button type="button" class="outil outil-carre" data-diapo-reglage="centre" data-en-edition title="Centrer">≡</button>
       <button type="button" class="outil outil-carre" data-diapo-reglage="droite" data-en-edition title="Aligner à droite">⇥</button>
-      <label class="outil outil-carre outil-couleur" title="Couleur de fond de la diapo">
-        <span>▣</span><input type="color" data-couleur-fond value="#000000" data-en-edition>
-      </label>
-      <button type="button" class="outil outil-carre" data-diapo-reglage="fond-theme" data-en-edition title="Fond du thème">∅</button>
+      <button type="button" class="outil outil-couleur" data-ouvrir-couleurs="fond" data-en-edition aria-haspopup="true" title="Couleur de fond de la diapo">
+        <span class="carre-fond" data-apercu="fond"></span><span>Fond</span><span class="fleche">▾</span>
+      </button>
       <span class="ruban-libelle">Paragraphe</span>
     </div>
     <div class="ruban-groupe groupe-edition-seule">
@@ -202,6 +202,23 @@
 {% include "cultes/_espace.html" %}
 
 {% if peut_modifier %}
+{% if perms.chants.change_chant %}
+{# Nuanciers du ruban, hors du ruban (qui coupe ce qui dépasse) : placés sous leur bouton par editeur.js. #}
+<div class="palette" data-palette="texte" role="dialog" aria-label="Couleur du texte" hidden>
+  <p class="palette-titre">Couleur du texte <small>sélection, sinon toute la diapo</small></p>
+  <div class="nuancier">{% for c in couleurs_texte %}<button type="button" data-couleur="{{ c }}" style="background: {{ c }}" title="{{ c }}" aria-label="{{ c }}"></button>{% endfor %}</div>
+  <label class="palette-ligne">🎨 Autre couleur… <input type="color" data-couleur-libre value="#ffd700"></label>
+  <button type="button" class="palette-ligne" data-couleur="">↺ Couleur du thème</button>
+</div>
+<div class="palette" data-palette="fond" role="dialog" aria-label="Fond de la diapo" hidden>
+  <p class="palette-titre">Fond de la diapo</p>
+  <div class="nuancier">{% for c in couleurs_fond %}<button type="button" data-couleur="{{ c }}" style="background: {{ c }}" title="{{ c }}" aria-label="{{ c }}"></button>{% endfor %}</div>
+  <label class="palette-ligne">🎨 Autre couleur… <input type="color" data-couleur-libre value="#000000"></label>
+  <button type="button" class="palette-ligne" data-couleur="">↺ Fond du thème</button>
+  <button type="button" class="palette-ligne palette-chant" data-fond-chant>Appliquer ce fond à tout le chant</button>
+</div>
+{% endif %}
+
 <dialog id="dlg-chant" class="dialogue" aria-labelledby="dlg-chant-titre">
   <div class="dialogue-entete">
     <h2 id="dlg-chant-titre">Insérer un chant</h2>

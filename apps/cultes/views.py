@@ -46,6 +46,15 @@ def moments_connus():
 
 
 # Tailles proposées dans le ruban (comme PowerPoint) ; toute autre valeur peut être saisie.
+# Nuanciers du ruban (Couleur du texte, Fond) ; « Autre couleur… » permet tout le reste.
+COULEURS_TEXTE = [
+    "#ffffff", "#fff2a8", "#ffd700", "#ffa500", "#ff4d4d", "#ff85c0",
+    "#c084fc", "#60a5fa", "#7dd3fc", "#4ade80", "#bfbfbf", "#000000",
+]
+COULEURS_FOND = [
+    "#000000", "#1f1f1f", "#404040", "#0b1f4d", "#1e3a8a", "#0f4c5c",
+    "#14532d", "#4a0e1a", "#7f1d1d", "#3b0764", "#5c3d2e", "#ffffff",
+]
 TAILLES_PT = [8, 10, 12, 14, 16, 18, 20, 24, 28, 32, 36, 40, 44, 48, 54, 60, 66, 72, 80, 88, 96, 110, 120, 140, 160, 200]
 
 
@@ -65,6 +74,8 @@ def contexte_espace(request, culte, selection=None, edition=None, piece=None):
         "theme": theme,
         "polices": POLICES.items(),
         "tailles_pt": TAILLES_PT,
+        "couleurs_texte": COULEURS_TEXTE,
+        "couleurs_fond": COULEURS_FOND,
         "themes": Theme.objects.all(),
         "groupes": groupes,
         "a_des_elements": any(g.element for g in groupes),
@@ -385,6 +396,20 @@ def supprimer_diapo(request, pk, chant_pk, piece_pk):
     chant.mettre_a_jour_recherche()
     voisine = pieces[min(rang, len(pieces) - 1)].pk if pieces else None
     return reponse_espace(request, culte, element.pk, chant.pk, voisine)
+
+
+@peut_editer_chant
+@require_POST
+def fond_du_chant(request, pk, chant_pk):
+    """Même couleur de fond pour toutes les diapos du chant (vide : fond du thème)."""
+    culte, element, chant = chant_du_culte(pk, chant_pk)
+    form = DiapoChantForm({"couleur_fond": request.POST.get("couleur_fond", "")})
+    if not form.is_valid():
+        return HttpResponseBadRequest(premiere_erreur(form))
+    chant.diapos.update(couleur_fond=form.cleaned_data["couleur_fond"])
+    piece = request.POST.get("piece")
+    piece = int(piece) if piece and piece.isdigit() else None
+    return reponse_espace(request, culte, element.pk, chant.pk, piece)
 
 
 @peut_editer_chant

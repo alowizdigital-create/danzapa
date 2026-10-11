@@ -723,16 +723,53 @@ input.titre-culte:hover, input.titre-culte:focus { border-color: var(--bordure);
 .groupe-edition .groupe-entete { color: var(--accent); font-weight: 600; }
 
 .outil-carre { min-width: 2.2rem; max-width: none; justify-content: center; font-size: 1rem; padding: 0.35rem 0.5rem; }
-.outil-couleur { position: relative; cursor: pointer; }
-.outil-couleur input[type=color] {
-  width: 1.6rem;
-  height: 0.5rem;
+.outil-couleur { flex-direction: row; align-items: center; gap: 0.3rem; font-size: 0.85rem; }
+.outil-couleur .couleur-a { display: inline-flex; flex-direction: column; align-items: center; font-size: 1rem; }
+.trait-couleur { display: block; width: 1.1rem; height: 0.28rem; margin-left: -1.35rem; margin-top: 1.25rem; background: #ffd700; border-radius: 1px; }
+.carre-fond { width: 1rem; height: 1rem; border: 1px solid var(--bordure); border-radius: 2px; background: #000; }
+.outil-couleur .fleche { font-size: 0.65rem; color: var(--texte-doux); }
+
+/* Nuanciers (Couleur du texte, Fond) */
+.palette {
+  position: fixed;
+  z-index: 50;
+  width: 15.5rem;
+  padding: 0.6rem;
+  background: var(--surface);
+  border: 1px solid var(--bordure);
+  border-radius: 8px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
+}
+.palette[hidden] { display: none; }
+.palette-titre { margin: 0 0 0.5rem; font-size: 0.85rem; font-weight: 600; }
+.palette-titre small { display: block; font-weight: 400; color: var(--texte-doux); }
+.nuancier { display: grid; grid-template-columns: repeat(6, 1fr); gap: 0.35rem; margin-bottom: 0.5rem; }
+.nuancier button {
+  aspect-ratio: 1;
+  border: 1px solid rgba(0, 0, 0, 0.25);
+  border-radius: 4px;
+  cursor: pointer;
   padding: 0;
+}
+.nuancier button:hover { outline: 2px solid var(--accent); outline-offset: 1px; }
+.palette-ligne {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.35rem 0.4rem;
   border: none;
+  border-radius: 4px;
   background: none;
+  font: inherit;
+  font-size: 0.85rem;
+  text-align: left;
   cursor: pointer;
 }
-.outil-couleur.desactive { opacity: 0.4; pointer-events: none; }
+.palette-ligne:hover { background: var(--fond); }
+.palette-ligne input[type=color] { width: 2rem; height: 1.4rem; padding: 0; border: 1px solid var(--bordure); background: none; cursor: pointer; }
+.palette-chant { margin-top: 0.3rem; border-top: 1px solid var(--bordure); border-radius: 0; padding-top: 0.5rem; color: var(--accent); font-weight: 600; }
 .couleur-a { font-weight: 700; line-height: 1; }
 body:not(.mode-edition) .groupe-police .outil { opacity: 0.45; }
 

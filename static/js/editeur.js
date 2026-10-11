@@ -117,15 +117,12 @@
     const surPiece = !!(edition && vignette && vignette.dataset.piece && chant === edition);
     document.querySelectorAll("[data-cible]").forEach((b) => (b.disabled = !element || !!edition));
     document.querySelectorAll("[data-en-edition]").forEach((b) => {
-      const pourDiapo = b.matches("[data-format], [data-diapo-reglage], [data-couleur-texte], [data-couleur-fond], [data-taille-diapo], [data-police-diapo]")
+      const pourDiapo = b.matches("[data-format], [data-diapo-reglage], [data-ouvrir-couleurs], [data-taille-diapo], [data-police-diapo]")
         || ["dupliquer", "haut", "bas", "supprimer"].includes(b.dataset.diapoAction);
       b.disabled = !edition || (pourDiapo && !surPiece);
     });
     document.querySelectorAll('[data-chant-action="editer"][data-hors-edition]').forEach((b) => (b.disabled = !!edition || !chant));
     afficherReglages();
-    document.querySelectorAll("[data-couleur-texte], [data-couleur-fond]").forEach((i) => {
-      i.closest("label").classList.toggle("desactive", i.disabled);
-    });
 
     const e = espace();
     document.body.classList.toggle("mode-edition", !!edition);
@@ -369,6 +366,7 @@
 
   // Le ruban montre la police, la taille et l'alignement de la diapo affichée.
   function afficherReglages() {
+    afficherFondActuel();
     const g = grande();
     const avecTexte = !!(g && g.dataset.piece);
     const champTaille = document.querySelector("[data-taille-diapo]");
@@ -444,12 +442,10 @@
 
   // Les boutons de mise en forme ne doivent pas faire perdre la sélection du texte.
   document.addEventListener("mousedown", (evt) => {
-    if (evt.target.closest("[data-format], [data-diapo-reglage]")) evt.preventDefault();
+    if (evt.target.closest("[data-format], [data-diapo-reglage], [data-ouvrir-couleurs], .palette button")) evt.preventDefault();
   });
 
   document.addEventListener("input", (evt) => {
-    if (evt.target.matches && evt.target.matches("[data-couleur-texte]")) formater("foreColor", evt.target.value);
-    if (evt.target.matches && evt.target.matches("[data-couleur-fond]")) reglerDiapo("fond", evt.target.value);
   });
 
   // Taille saisie (validée par Entrée ou en quittant le champ) et police choisie.
@@ -467,6 +463,112 @@
       else evt.target.blur();
     }
   });
+
+  // ------------------------------------------------------------ Couleurs (texte, fond)
+
+  let paletteOuverte = null;
+
+  function fermerPalette() {
+    if (paletteOuverte) paletteOuverte.hidden = true;
+    paletteOuverte = null;
+  }
+
+  function ouvrirPalette(bouton) {
+    const palette = document.querySelector(`[data-palette="${bouton.dataset.ouvrirCouleurs}"]`);
+    if (!palette) return;
+    if (paletteOuverte === palette) return fermerPalette();
+    fermerPalette();
+    const r = bouton.getBoundingClientRect();
+    palette.hidden = false;
+    palette.style.top = `${r.bottom + 4}px`;
+    palette.style.left = `${Math.max(8, Math.min(r.left, window.innerWidth - palette.offsetWidth - 8))}px`;
+    paletteOuverte = palette;
+  }
+
+  // Couleur du texte : sur la sélection, ou sur toute la diapo si rien n'est sélectionné.
+  // Couleur vide : retour à la couleur du thème.
+  function colorierTexte(couleur) {
+    const zone = zoneEditable();
+    if (!zone) return;
+    zone.focus();
+    const sel = window.getSelection();
+    let range = plage && zone.contains(plage.commonAncestorContainer) ? plage.cloneRange() : null;
+    const toutLeTexte = !range || range.collapsed;
+    if (toutLeTexte) {
+      range = document.createRange();
+      range.selectNodeContents(zone);
+    }
+    sel.removeAllRanges();
+    sel.addRange(range);
+    if (couleur) {
+      document.execCommand("styleWithCSS", false, false);
+      document.execCommand("foreColor", false, couleur);
+      document.querySelector('[data-apercu="texte"]').style.background = couleur;
+    } else {
+      zone.querySelectorAll("font, span").forEach((el) => {
+        if (!toutLeTexte && !range.intersectsNode(el)) return;
+        el.removeAttribute("color");
+        el.style.removeProperty("color");
+      });
+    }
+    if (toutLeTexte) sel.collapseToEnd();
+    planifierSauvegarde();
+  }
+
+  function choisirCouleur(type, couleur) {
+    if (type === "texte") colorierTexte(couleur);
+    else if (couleur) reglerDiapo("fond", couleur);
+    else reglerDiapo("fond-theme");
+    afficherFondActuel();
+  }
+
+  function afficherFondActuel() {
+    const g = grande();
+    const apercu = document.querySelector('[data-apercu="fond"]');
+    if (apercu) apercu.style.background = (g && g.dataset.fond) || "var(--fond-couleur, #000)";
+  }
+
+  async function fondPourToutLeChant() {
+    const g = grande();
+    if (!edition || !g) return;
+    await sauverMaintenant();
+    htmx.ajax("POST", urlChant(edition, "fond/"), {
+      target: "#espace",
+      swap: "outerHTML",
+      values: { couleur_fond: g.dataset.fond || "", piece: g.dataset.piece || "" },
+    });
+  }
+
+  document.addEventListener("click", (evt) => {
+    const bouton = evt.target.closest("[data-ouvrir-couleurs]");
+    if (bouton) return ouvrirPalette(bouton);
+    if (!paletteOuverte) return;
+    const type = paletteOuverte.dataset.palette;
+    const pastille = evt.target.closest("[data-couleur]");
+    if (pastille && paletteOuverte.contains(pastille)) {
+      choisirCouleur(type, pastille.dataset.couleur);
+      return fermerPalette();
+    }
+    if (evt.target.closest("[data-fond-chant]")) {
+      fermerPalette();
+      return fondPourToutLeChant();
+    }
+    if (!evt.target.closest(".palette")) fermerPalette();
+  });
+
+  document.addEventListener("change", (evt) => {
+    if (!evt.target.matches || !evt.target.matches("[data-couleur-libre]")) return;
+    const palette = evt.target.closest("[data-palette]");
+    choisirCouleur(palette.dataset.palette, evt.target.value);
+    fermerPalette();
+  });
+
+  document.addEventListener("keydown", (evt) => {
+    if (evt.key === "Escape" && paletteOuverte) {
+      evt.stopImmediatePropagation();
+      fermerPalette();
+    }
+  }, true);
 
   // Projection : F5 depuis le début, Maj+F5 depuis la diapo actuelle (comme PowerPoint).
   function urlProjection(depuisActuelle) {

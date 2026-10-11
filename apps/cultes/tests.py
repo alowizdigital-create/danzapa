@@ -352,6 +352,18 @@ class SaisieDesChantsTests(TestCase):
         piece.save()
         self.assertEqual((piece.police, piece.taille), ("", 8))
 
+    def test_fond_pour_tout_le_chant(self):
+        url = reverse("cultes:fond_chant", args=[self.culte.pk, self.chant.pk])
+        reponse = self.hx_post(url, {"couleur_fond": "#0b1f4d", "piece": self.pieces[1].pk})
+        self.assertEqual(reponse.status_code, 200)
+        self.assertEqual(set(self.chant.diapos.values_list("couleur_fond", flat=True)), {"#0b1f4d"})
+        self.assertContains(reponse, f'data-piece="{self.pieces[1].pk}"')
+        self.hx_post(url, {"couleur_fond": ""})
+        self.assertEqual(set(self.chant.diapos.values_list("couleur_fond", flat=True)), {""})
+        self.assertEqual(self.hx_post(url, {"couleur_fond": "bleu"}).status_code, 400)
+        self.client.force_login(self.lecteur)
+        self.assertEqual(self.hx_post(url, {"couleur_fond": "#000000"}).status_code, 403)
+
     def test_reglages_invalides_refuses(self):
         reponse = self.client.post(self.url("enregistrer_diapo", self.pieces[0].pk), {"couleur_fond": "red;x"})
         self.assertEqual(reponse.status_code, 400)
@@ -436,6 +448,7 @@ class SaisieDesChantsTests(TestCase):
 
     def test_editeur_affiche_le_ruban_de_mise_en_forme(self):
         reponse = self.client.get(self.culte.get_absolute_url())
-        for attendu in ('data-format="bold"', 'data-couleur-texte', 'data-diapo-action="ajouter"', 'id="dlg-nouveau-chant"'):
+        for attendu in ('data-format="bold"', 'data-ouvrir-couleurs="texte"', 'data-ouvrir-couleurs="fond"',
+                        'data-palette="texte"', 'data-fond-chant', 'data-diapo-action="ajouter"', 'id="dlg-nouveau-chant"'):
             self.assertContains(reponse, attendu)
         self.assertContains(reponse, f'data-piece="{self.pieces[0].pk}"')
