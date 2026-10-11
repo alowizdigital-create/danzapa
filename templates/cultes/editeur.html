@@ -82,15 +82,17 @@
       <span class="ruban-libelle">Chant</span>
     </div>
     <div class="ruban-groupe groupe-police groupe-edition-seule">
+      <div class="pile-police">
       <div class="outils-police">
         <select data-police-diapo data-en-edition title="Police de la diapo" aria-label="Police">
-          <option value="">Police du thème ({{ theme.police }})</option>
+          <option value="">Thème ({{ theme.police }})</option>
           {% for nom, pile in polices %}<option value="{{ nom }}" data-pile="{{ pile }}" style="font-family: {{ pile }}">{{ nom }}</option>{% endfor %}
         </select>
         <input type="number" data-taille-diapo data-en-edition list="tailles-pt" min="8" max="200" step="1" inputmode="numeric"
                title="Taille du texte (pt). Effacer puis Entrée : taille automatique du thème." aria-label="Taille du texte">
         <datalist id="tailles-pt">{% for t in tailles_pt %}<option value="{{ t }}">{% endfor %}</datalist>
       </div>
+      <div class="outils-format">
       <button type="button" class="outil outil-carre" data-format="bold" data-en-edition title="Gras (Ctrl+B)"><b>G</b></button>
       <button type="button" class="outil outil-carre" data-format="italic" data-en-edition title="Italique (Ctrl+I)"><i>I</i></button>
       <button type="button" class="outil outil-carre" data-format="underline" data-en-edition title="Souligné (Ctrl+U)"><u>S</u></button>
@@ -99,6 +101,8 @@
         <span class="couleur-a">A</span><span class="trait-couleur" data-apercu="texte"></span><span class="fleche">▾</span>
       </button>
       <button type="button" class="outil outil-carre" data-format="removeFormat" data-en-edition title="Effacer la mise en forme">⌫</button>
+      </div>
+      </div>
       <span class="ruban-libelle">Police</span>
     </div>
     <div class="ruban-groupe groupe-edition-seule">
