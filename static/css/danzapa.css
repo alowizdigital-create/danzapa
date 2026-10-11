@@ -904,3 +904,6 @@ body.presentateur {
   text-decoration: none;
 }
 .bouton-exporter:hover { border-color: var(--accent); color: var(--accent); }
+.etat-projecteur { margin-left: auto; font-size: 0.85rem; color: #f0b429; }
+.etat-projecteur.connecte { color: #6ccb5f; }
+.presentateur-barre .etat-projecteur + .bouton-principal { margin-left: 0; }

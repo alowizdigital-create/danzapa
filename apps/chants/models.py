@@ -1,3 +1,5 @@
+import uuid
+
 from django.conf import settings
 from django.core.validators import MaxValueValidator, MinValueValidator, RegexValidator
 from django.db import models, transaction
@@ -8,6 +10,9 @@ from .recherche import normaliser
 
 class Chant(models.Model):
     """Un chant de la bibliothèque : saisi une fois, réutilisé dans tous les cultes."""
+
+    # Identifiant public (adresses, pages, JavaScript) ; la clé entière reste interne.
+    uuid = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
 
     titre = models.CharField(max_length=200)
     auteur = models.CharField(max_length=200, blank=True)
@@ -71,6 +76,9 @@ couleur_hex = RegexValidator(r"^#[0-9a-fA-F]{6}$", "Couleur au format #RRGGBB.")
 
 class DiapoChant(models.Model):
     """Une diapo d'un chant, telle qu'elle a été tapée et mise en forme."""
+
+    # Identifiant public (adresses, pages, JavaScript) ; la clé entière reste interne.
+    uuid = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
 
     GAUCHE, CENTRE, DROITE = "gauche", "centre", "droite"
     ALIGNEMENTS = [(GAUCHE, "Gauche"), (CENTRE, "Centré"), (DROITE, "Droite")]

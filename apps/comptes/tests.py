@@ -287,7 +287,7 @@ class SansConnexionTests(TestCase):
             culte = Culte.objects.get(titre="Culte test")
             self.assertEqual(culte.cree_par, admin)
             for nom in ("cultes:editeur", "cultes:export_pptx"):
-                self.assertEqual(self.client.get(reverse(nom, args=[culte.pk])).status_code, 200)
+                self.assertEqual(self.client.get(reverse(nom, args=[culte.uuid])).status_code, 200)
         self.assertEqual(Utilisateur.objects.count(), 1)
 
     def test_superuser_existant_reutilise(self):

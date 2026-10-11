@@ -3,14 +3,14 @@
 <ul class="liste-resultats">
   {% for chant in chants %}
   <li>
-    <button type="button" class="resultat" hx-post="{% url 'cultes:ajouter_chant' culte.pk %}" hx-vals='{"chant": "{{ chant.pk }}"}'
+    <button type="button" class="resultat" hx-post="{% url 'cultes:ajouter_chant' culte.uuid %}" hx-vals='{"chant": "{{ chant.uuid }}"}'
             hx-include="#moment-chant" hx-target="#espace" hx-swap="outerHTML" data-ferme-apres>
-      <span class="liste-titre">{{ chant.titre }}{% if chant.pk in deja %} <span class="badge">déjà dans ce culte</span>{% endif %}</span>
+      <span class="liste-titre">{{ chant.titre }}{% if chant.uuid in deja %} <span class="badge">déjà dans ce culte</span>{% endif %}</span>
       <span class="liste-meta">{% if chant.liste_tags %}{{ chant.liste_tags|join:", " }} · {% endif %}{{ chant.diapos.all|length }} diapo{{ chant.diapos.all|length|pluralize }}{% with premiere=chant.diapos.all|first %}{% if premiere %} · {{ premiere.texte|truncatechars:60 }}{% endif %}{% endwith %}</span>
     </button>
     {% if perms.chants.delete_chant and not chant.utilisations.all %}
       <button type="button" class="bouton-lien supprimer-chant" title="Supprimer de la bibliothèque"
-              hx-post="{% url 'cultes:supprimer_chant' culte.pk chant.pk %}" hx-target="#resultats-chants"
+              hx-post="{% url 'cultes:supprimer_chant' culte.uuid chant.uuid %}" hx-target="#resultats-chants"
               hx-confirm="Supprimer définitivement « {{ chant.titre }} » de la bibliothèque ?">🗑</button>
     {% endif %}
   </li>

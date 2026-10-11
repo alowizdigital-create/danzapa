@@ -212,7 +212,7 @@ class VuesTests(TestCase):
         self.editeur = utilisateur("editeur", roles.EDITEUR)
         self.lecteur = utilisateur("lecteur", roles.LECTEUR)
         self.culte = Culte.objects.create(date=date(2026, 9, 20))
-        self.export = reverse("cultes:export_pptx", args=[self.culte.pk])
+        self.export = reverse("cultes:export_pptx", args=[self.culte.uuid])
 
     def test_lecteur_peut_exporter(self):
         self.client.force_login(self.lecteur)
@@ -239,7 +239,7 @@ class VuesTests(TestCase):
         theme = Theme.objects.create(nom="Bleu", couleur_fond="#102040")
         self.client.force_login(self.editeur)
         reponse = self.client.post(
-            reverse("cultes:parametres", args=[self.culte.pk]), {"theme": theme.pk}, headers={"HX-Request": "true"}
+            reverse("cultes:parametres", args=[self.culte.uuid]), {"theme": theme.uuid}, headers={"HX-Request": "true"}
         )
         self.assertContains(reponse, "--fond-couleur: #102040")
         self.culte.refresh_from_db()
@@ -275,10 +275,10 @@ class VuesTests(TestCase):
     def test_classique_ne_peut_pas_etre_supprime_ni_renomme(self):
         self.client.force_login(self.editeur)
         classique = Theme.par_defaut()
-        self.client.post(reverse("projection:theme_suppression", args=[classique.pk]))
+        self.client.post(reverse("projection:theme_suppression", args=[classique.uuid]))
         self.assertTrue(Theme.objects.filter(pk=classique.pk).exists())
         reponse = self.client.post(
-            reverse("projection:theme_modification", args=[classique.pk]),
+            reverse("projection:theme_modification", args=[classique.uuid]),
             {"nom": "Autre", "couleur_fond": "#000000", "couleur_texte": "#ffffff", "police": "Calibri",
              "taille_paroles": "54", "police_titres": "Georgia", "taille_titre": "32", "couleur_bandeau": "#8f8f8f"},
         )
@@ -289,7 +289,7 @@ class VuesTests(TestCase):
         self.culte.theme = theme
         self.culte.save()
         self.client.force_login(self.editeur)
-        self.client.post(reverse("projection:theme_suppression", args=[theme.pk]))
+        self.client.post(reverse("projection:theme_suppression", args=[theme.uuid]))
         self.culte.refresh_from_db()
         self.assertIsNone(self.culte.theme)
         self.assertEqual(self.culte.theme_effectif.nom, CLASSIQUE)

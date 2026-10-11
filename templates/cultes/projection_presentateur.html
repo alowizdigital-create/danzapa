@@ -6,17 +6,19 @@
   <title>{{ culte.titre }} · Mode présentateur</title>
   <link rel="icon" href="{% static 'img/favicon.svg' %}" type="image/svg+xml">
   <link rel="stylesheet" href="{% static 'css/danzapa.css' %}">
+  <script src="{% static 'js/ecrans.js' %}" defer></script>
   <script src="{% static 'js/projection.js' %}" defer></script>
 </head>
 {# Vue présentateur : pilote l'écran de projection (autre fenêtre) via BroadcastChannel. #}
 <body class="presentateur{% if theme.image_bienvenue %} avec-image-bienvenue{% endif %}" style="{{ theme.style_css }}"
-      data-mode="presentateur" data-debut="{{ debut }}" data-canal="danzapa-projection-{{ culte.pk }}"
-      data-retour="{% url 'cultes:editeur' culte.pk %}" data-projection="{% url 'cultes:projection' culte.pk %}">
+      data-mode="presentateur" data-debut="{{ debut }}" data-canal="danzapa-projection-{{ culte.uuid }}"
+      data-retour="{% url 'cultes:editeur' culte.uuid %}" data-projection="{% url 'cultes:projection' culte.uuid %}">
   <header class="presentateur-barre">
-    <a class="bouton-lien" href="{% url 'cultes:editeur' culte.pk %}">← Éditeur</a>
+    <a class="bouton-lien" href="{% url 'cultes:editeur' culte.uuid %}">← Éditeur</a>
     <strong>{{ culte.titre }}</strong>
     <span class="presentateur-chrono" data-chrono title="Durée depuis l'ouverture (clic : remettre à zéro)">00:00</span>
-    <button type="button" class="bouton-principal" data-ouvrir-projection>▶ Ouvrir l'écran de projection</button>
+    <span class="etat-projecteur" data-etat-projecteur>Projecteur : non ouvert</span>
+    <button type="button" class="bouton-principal" data-ouvrir-projection>▶ Ouvrir sur le projecteur</button>
   </header>
   <section class="presentateur-principal">
     <div class="presentateur-actuelle">

@@ -1,3 +1,4 @@
+import uuid
 from datetime import timedelta
 
 from django.contrib import messages
@@ -87,6 +88,14 @@ def contexte_espace(request, culte, selection=None, edition=None, piece=None):
     }
 
 
+def uuid_valide(valeur):
+    """Le UUID reçu (texte), ou None s'il est absent ou mal formé."""
+    try:
+        return uuid.UUID(str(valeur)) if valeur else None
+    except ValueError:
+        return None
+
+
 def reponse_espace(request, culte, selection=None, edition=None, piece=None):
     """Après une modification : le fragment pour HTMX, sinon retour à l'éditeur."""
     culte.save(update_fields=["date_modification"])
@@ -131,6 +140,8 @@ class CulteCreation(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
 
 
 class CulteSuppression(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
+    slug_field = "uuid"  # adresse par UUID public
+    slug_url_kwarg = "uuid"
     permission_required = "cultes.delete_culte"
     model = Culte
     template_name = "cultes/confirmer_suppression.html"
@@ -145,7 +156,7 @@ class CulteSuppression(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
 @permission_required("cultes.add_culte", raise_exception=True)
 @require_POST
 def dupliquer(request, pk):
-    culte = get_object_or_404(Culte, pk=pk)
+    culte = get_object_or_404(Culte, uuid=pk)
     form = DuplicationForm(request.POST)
     if not form.is_valid():
         messages.error(request, "Choisissez une date valide pour la copie.")
@@ -160,7 +171,7 @@ def dupliquer(request, pk):
 
 @peut_voir
 def editeur(request, pk):
-    culte = get_object_or_404(Culte, pk=pk)
+    culte = get_object_or_404(Culte, uuid=pk)
     contexte = contexte_espace(request, culte)
     # Le premier chant d'un culte est en général le cantique d'entrée.
     contexte["moment_suggere"] = "" if contexte["a_des_elements"] else MOMENT_PAR_DEFAUT
@@ -173,7 +184,7 @@ def editeur(request, pk):
 @peut_modifier
 @require_POST
 def parametres(request, pk):
-    culte = get_object_or_404(Culte, pk=pk)
+    culte = get_object_or_404(Culte, uuid=pk)
     form = parametres_form(request.POST, culte)
     if form is None:
         return HttpResponseBadRequest("Aucun paramètre reçu.")
@@ -185,14 +196,14 @@ def parametres(request, pk):
 
 @peut_voir
 def chercher_chants(request, pk):
-    culte = get_object_or_404(Culte, pk=pk)
+    culte = get_object_or_404(Culte, uuid=pk)
     q = request.GET.get("q", "").strip()
     # Classement sur tous les résultats (titres seuls, requête légère), puis
     # chargement complet des 30 premiers.
     ids = [c.pk for c in titres_d_abord(filtrer(Chant.objects.only("pk", "titre"), q), q)[:30]]
     par_id = Chant.objects.prefetch_related("diapos", "utilisations").in_bulk(ids)
     chants = [par_id[i] for i in ids]
-    deja = set(culte.elements.exclude(chant=None).values_list("chant_id", flat=True))
+    deja = set(culte.elements.exclude(chant=None).values_list("chant__uuid", flat=True))
     return render(
         request,
         "cultes/_resultats_chants.html",
@@ -203,11 +214,11 @@ def chercher_chants(request, pk):
 @peut_modifier
 @require_POST
 def ajouter_chant(request, pk):
-    culte = get_object_or_404(Culte, pk=pk)
+    culte = get_object_or_404(Culte, uuid=pk)
     form = AjoutChantForm(request.POST)
     if not form.is_valid():
         return HttpResponseBadRequest("Chant invalide.")
-    chant = get_object_or_404(Chant, pk=form.cleaned_data["chant"])
+    chant = get_object_or_404(Chant, uuid=form.cleaned_data["chant"])
     element = ElementCulte.objects.create(
         culte=culte,
         ordre=culte.prochain_ordre(),
@@ -215,13 +226,13 @@ def ajouter_chant(request, pk):
         chant=chant,
         moment=form.cleaned_data["moment"].strip(),
     )
-    return reponse_espace(request, culte, element.pk)
+    return reponse_espace(request, culte, element.uuid)
 
 
 @peut_modifier
 @require_POST
 def ajouter_texte(request, pk):
-    culte = get_object_or_404(Culte, pk=pk)
+    culte = get_object_or_404(Culte, uuid=pk)
     form = TexteLibreForm(request.POST)
     if not form.is_valid():
         return HttpResponseBadRequest("Texte invalide.")
@@ -230,7 +241,7 @@ def ajouter_texte(request, pk):
     element.type = ElementCulte.TEXTE
     element.ordre = culte.prochain_ordre()
     element.save()
-    return reponse_espace(request, culte, element.pk)
+    return reponse_espace(request, culte, element.uuid)
 
 
 # ---------------------------------------------------------------- Chants (saisie en place)
@@ -248,8 +259,8 @@ def peut_editer_chant(vue):
 
 def chant_du_culte(pk, chant_pk):
     """Le chant, à condition qu'il fasse partie de ce culte."""
-    culte = get_object_or_404(Culte, pk=pk)
-    element = get_object_or_404(culte.elements.select_related("chant"), chant_id=chant_pk)
+    culte = get_object_or_404(Culte, uuid=pk)
+    element = get_object_or_404(culte.elements.select_related("chant"), chant__uuid=chant_pk)
     return culte, element, element.chant
 
 
@@ -262,7 +273,7 @@ def premiere_erreur(form):
 def creer_chant(request, pk):
     """« Nouveau chant » : crée le chant dans la bibliothèque, l'ajoute au culte,
     et ouvre l'éditeur sur sa première diapo."""
-    culte = get_object_or_404(Culte, pk=pk)
+    culte = get_object_or_404(Culte, uuid=pk)
     form = NouveauChantForm(request.POST)
     if not form.is_valid():
         return HttpResponseBadRequest(premiere_erreur(form))
@@ -281,7 +292,7 @@ def creer_chant(request, pk):
             chant=chant,
             moment=form.cleaned_data["moment"].strip(),
         )
-    return reponse_espace(request, culte, element.pk, chant.pk, chant.diapos.first().pk)
+    return reponse_espace(request, culte, element.uuid, chant.uuid, chant.diapos.first().uuid)
 
 
 @peut_editer_chant
@@ -298,8 +309,8 @@ def infos_chant(request, pk, chant_pk):
         element.moment = request.POST["moment"].strip()[: ElementCulte._meta.get_field("moment").max_length]
         element.save(update_fields=["moment"])
     # Depuis la fenêtre Propriétés (hors édition), ne pas ouvrir l'édition du chant.
-    edition = None if request.POST.get("hors_edition") else chant.pk
-    return reponse_espace(request, culte, element.pk, edition)
+    edition = None if request.POST.get("hors_edition") else chant.uuid
+    return reponse_espace(request, culte, element.uuid, edition)
 
 
 @peut_editer_chant
@@ -308,7 +319,7 @@ def enregistrer_diapo(request, pk, chant_pk, piece_pk):
     """Sauvegarde automatique d'une diapo pendant la saisie (réponse JSON légère,
     pour ne pas recharger l'éditeur sous les doigts de la personne)."""
     culte, element, chant = chant_du_culte(pk, chant_pk)
-    piece = get_object_or_404(chant.diapos, pk=piece_pk)
+    piece = get_object_or_404(chant.diapos, uuid=piece_pk)
     form = DiapoChantForm(request.POST)
     if not form.is_valid():
         return HttpResponseBadRequest(premiere_erreur(form))
@@ -360,8 +371,8 @@ def ajouter_diapo(request, pk, chant_pk):
     """Nouvelle diapo (vide, ou copie de `dupliquer`) placée après `apres`."""
     culte, element, chant = chant_du_culte(pk, chant_pk)
     pieces = list(chant.diapos.all())
-    modele = next((p for p in pieces if str(p.pk) == request.POST.get("dupliquer")), None)
-    apres = next((p for p in pieces if str(p.pk) == request.POST.get("apres")), modele)
+    modele = next((p for p in pieces if str(p.uuid) == request.POST.get("dupliquer")), None)
+    apres = next((p for p in pieces if str(p.uuid) == request.POST.get("apres")), modele)
     nouvelle = DiapoChant(chant=chant, ordre=0)
     if modele:
         nouvelle.contenu = modele.contenu
@@ -380,7 +391,7 @@ def ajouter_diapo(request, pk, chant_pk):
     pieces.insert(position, nouvelle)
     renumeroter_diapos(chant, pieces)
     chant.mettre_a_jour_recherche()
-    return reponse_espace(request, culte, element.pk, chant.pk, nouvelle.pk)
+    return reponse_espace(request, culte, element.uuid, chant.uuid, nouvelle.uuid)
 
 
 @peut_editer_chant
@@ -388,14 +399,14 @@ def ajouter_diapo(request, pk, chant_pk):
 def supprimer_diapo(request, pk, chant_pk, piece_pk):
     culte, element, chant = chant_du_culte(pk, chant_pk)
     pieces = list(chant.diapos.all())
-    supprimee = get_object_or_404(chant.diapos, pk=piece_pk).pk
+    supprimee = get_object_or_404(chant.diapos, uuid=piece_pk).pk
     rang = [p.pk for p in pieces].index(supprimee)
     DiapoChant.objects.filter(pk=supprimee).delete()
     pieces = [p for p in pieces if p.pk != supprimee]
     renumeroter_diapos(chant, pieces)
     chant.mettre_a_jour_recherche()
-    voisine = pieces[min(rang, len(pieces) - 1)].pk if pieces else None
-    return reponse_espace(request, culte, element.pk, chant.pk, voisine)
+    voisine = pieces[min(rang, len(pieces) - 1)].uuid if pieces else None
+    return reponse_espace(request, culte, element.uuid, chant.uuid, voisine)
 
 
 @peut_editer_chant
@@ -407,9 +418,8 @@ def fond_du_chant(request, pk, chant_pk):
     if not form.is_valid():
         return HttpResponseBadRequest(premiere_erreur(form))
     chant.diapos.update(couleur_fond=form.cleaned_data["couleur_fond"])
-    piece = request.POST.get("piece")
-    piece = int(piece) if piece and piece.isdigit() else None
-    return reponse_espace(request, culte, element.pk, chant.pk, piece)
+    piece = uuid_valide(request.POST.get("piece"))
+    return reponse_espace(request, culte, element.uuid, chant.uuid, piece)
 
 
 @peut_editer_chant
@@ -418,27 +428,25 @@ def deplacer_diapo(request, pk, chant_pk, piece_pk):
     culte, element, chant = chant_du_culte(pk, chant_pk)
     pieces = list(chant.diapos.all())
     ids = [p.pk for p in pieces]
-    i = ids.index(get_object_or_404(chant.diapos, pk=piece_pk).pk)
+    i = ids.index(get_object_or_404(chant.diapos, uuid=piece_pk).pk)
     j = i - 1 if request.POST.get("sens") == "haut" else i + 1
     if 0 <= j < len(pieces):
         pieces[i], pieces[j] = pieces[j], pieces[i]
         renumeroter_diapos(chant, pieces)
-    return reponse_espace(request, culte, element.pk, chant.pk, piece_pk)
+    return reponse_espace(request, culte, element.uuid, chant.uuid, piece_pk)
 
 
 @peut_editer_chant
 @require_POST
 def reordonner_diapos(request, pk, chant_pk):
     culte, element, chant = chant_du_culte(pk, chant_pk)
-    par_id = {p.pk: p for p in chant.diapos.all()}
-    try:
-        ordre = [int(i) for i in request.POST.getlist("ordre")]
-    except ValueError:
+    par_uuid = {str(p.uuid): p for p in chant.diapos.all()}
+    ordre = request.POST.getlist("ordre")
+    if not all(uuid_valide(u) for u in ordre):
         return HttpResponseBadRequest("Ordre invalide.")
-    pieces = [par_id.pop(i) for i in ordre if i in par_id] + sorted(par_id.values(), key=lambda p: p.ordre)
+    pieces = [par_uuid.pop(u) for u in ordre if u in par_uuid] + sorted(par_uuid.values(), key=lambda p: p.ordre)
     renumeroter_diapos(chant, pieces)
-    selection = request.POST.get("piece")
-    return reponse_espace(request, culte, element.pk, chant.pk, int(selection) if selection and selection.isdigit() else None)
+    return reponse_espace(request, culte, element.uuid, chant.uuid, uuid_valide(request.POST.get("piece")))
 
 
 @login_required
@@ -447,7 +455,7 @@ def reordonner_diapos(request, pk, chant_pk):
 def supprimer_chant_bibliotheque(request, pk, chant_pk):
     """Depuis la fenêtre de recherche : retirer un chant de la bibliothèque,
     seulement s'il n'est utilisé dans aucun culte."""
-    chant = get_object_or_404(Chant, pk=chant_pk)
+    chant = get_object_or_404(Chant, uuid=chant_pk)
     nb = chant.utilisations.values("culte").distinct().count()
     if nb:
         request.message_resultats = (
@@ -464,7 +472,7 @@ def supprimer_chant_bibliotheque(request, pk, chant_pk):
 
 
 def element_du_culte(pk, element_pk):
-    return get_object_or_404(ElementCulte.objects.select_related("culte"), pk=element_pk, culte_id=pk)
+    return get_object_or_404(ElementCulte.objects.select_related("culte"), uuid=element_pk, culte__uuid=pk)
 
 
 @peut_modifier
@@ -475,7 +483,7 @@ def modifier_element(request, pk, element_pk):
     if not form.is_valid():
         return HttpResponseBadRequest("Données invalides.")
     form.save()
-    return reponse_espace(request, element.culte, element.pk)
+    return reponse_espace(request, element.culte, element.uuid)
 
 
 @peut_modifier
@@ -484,7 +492,7 @@ def basculer_masque(request, pk, element_pk):
     element = element_du_culte(pk, element_pk)
     element.masque = not element.masque
     element.save(update_fields=["masque"])
-    return reponse_espace(request, element.culte, element.pk)
+    return reponse_espace(request, element.culte, element.uuid)
 
 
 @peut_modifier
@@ -508,20 +516,20 @@ def deplacer_element(request, pk, element_pk):
     if 0 <= j < len(ids):
         ids[i], ids[j] = ids[j], ids[i]
         culte.renumeroter(ids)
-    return reponse_espace(request, culte, element.pk)
+    return reponse_espace(request, culte, element.uuid)
 
 
 @peut_modifier
 @require_POST
 def reordonner(request, pk):
-    culte = get_object_or_404(Culte, pk=pk)
-    try:
-        ids = [int(i) for i in request.POST.getlist("ordre")]
-    except ValueError:
+    culte = get_object_or_404(Culte, uuid=pk)
+    ordre = request.POST.getlist("ordre")
+    if not all(uuid_valide(u) for u in ordre):
         return HttpResponseBadRequest("Ordre invalide.")
-    culte.renumeroter(ids)
-    selection = request.POST.get("selection")
-    return reponse_espace(request, culte, int(selection) if selection and selection.isdigit() else None)
+    # UUID publics → clés internes, dans l'ordre reçu.
+    cles = {str(u): pk for u, pk in culte.elements.values_list("uuid", "pk")}
+    culte.renumeroter([cles[u] for u in ordre if u in cles])
+    return reponse_espace(request, culte, uuid_valide(request.POST.get("selection")))
 
 
 @peut_voir
@@ -531,7 +539,7 @@ def projection(request, pk):
     Mêmes diapos que l'export : les éléments masqués ne sont pas projetés.
     `?depuis=N` démarre à la diapo N de l'éditeur (ou à la suivante visible).
     """
-    culte = get_object_or_404(Culte.objects.select_related("theme"), pk=pk)
+    culte = get_object_or_404(Culte.objects.select_related("theme"), uuid=pk)
     theme = culte.theme_effectif
     groupes = rendu.annoter(diapos.groupes_du_culte(culte), theme)
     visibles = [diapo for groupe in groupes for diapo in groupe.diapos if not diapo.masque]
@@ -552,7 +560,7 @@ def projection(request, pk):
 
 @peut_voir
 def exporter_pptx(request, pk):
-    culte = get_object_or_404(Culte.objects.select_related("theme"), pk=pk)
+    culte = get_object_or_404(Culte.objects.select_related("theme"), uuid=pk)
     reponse = HttpResponse(
         pptx.exporter(culte),
         content_type="application/vnd.openxmlformats-officedocument.presentationml.presentation",

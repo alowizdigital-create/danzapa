@@ -23,7 +23,7 @@ TEXTE = "texte"
 class Diapo:
     type: str
     lignes: list[str]
-    element_id: int | None = None
+    element_id: str | None = None  # identifiants publics (UUID) : élément, chant, diapo
     masque: bool = False
     libelle: str = ""
     numero: int = 0  # position dans le culte, à partir de 1
@@ -34,8 +34,8 @@ class Diapo:
     taille: int | None = None  # pt choisis ; None : automatique
     police: str = ""  # vide : police du thème
     couleur_fond: str = ""
-    chant_id: int | None = None
-    piece_id: int | None = None  # DiapoChant correspondante
+    chant_id: str | None = None
+    piece_id: str | None = None  # DiapoChant correspondante
 
 
 @dataclass
@@ -50,13 +50,13 @@ def diapos_du_chant(element):
     """Diapo titre « Moment : Titre », puis les diapos du chant telles que saisies."""
     chant = element.chant
     titre = f"{element.moment} : {chant.titre}" if element.moment else chant.titre
-    diapos = [Diapo(TITRE, [titre], element.pk, element.masque, "Titre", chant_id=chant.pk)]
+    diapos = [Diapo(TITRE, [titre], str(element.uuid), element.masque, "Titre", chant_id=str(chant.uuid))]
     for rang, piece in enumerate(chant.diapos.all(), start=1):
         diapos.append(
             Diapo(
                 PAROLES,
                 piece.texte.split("\n") if piece.texte else [""],
-                element.pk,
+                str(element.uuid),
                 element.masque,
                 f"Diapo {rang}",
                 html=piece.contenu,
@@ -65,8 +65,8 @@ def diapos_du_chant(element):
                 taille=piece.taille,
                 police=piece.police,
                 couleur_fond=piece.couleur_fond,
-                chant_id=chant.pk,
-                piece_id=piece.pk,
+                chant_id=str(chant.uuid),
+                piece_id=str(piece.uuid),
             )
         )
     return diapos
@@ -76,11 +76,11 @@ def diapos_du_texte(element):
     diapos = []
     entete = " : ".join(p for p in (element.moment, element.titre) if p)
     if entete:
-        diapos.append(Diapo(TITRE, [entete], element.pk, element.masque, "Titre"))
+        diapos.append(Diapo(TITRE, [entete], str(element.uuid), element.masque, "Titre"))
     for paragraphe in paroles.decouper_paragraphes(element.contenu):
-        diapos.append(Diapo(TEXTE, paragraphe, element.pk, element.masque, "Texte"))
+        diapos.append(Diapo(TEXTE, paragraphe, str(element.uuid), element.masque, "Texte"))
     if not diapos:
-        diapos.append(Diapo(TEXTE, [""], element.pk, element.masque, "Texte"))
+        diapos.append(Diapo(TEXTE, [""], str(element.uuid), element.masque, "Texte"))
     return diapos
 
 

@@ -7,6 +7,7 @@
 {% block tete %}
 <script src="{% static 'vendor/htmx.min.js' %}" defer></script>
 <script src="{% static 'vendor/Sortable.min.js' %}" defer></script>
+<script src="{% static 'js/ecrans.js' %}" defer></script>
 <script src="{% static 'js/editeur.js' %}" defer></script>
 {% endblock %}
 
@@ -14,10 +15,10 @@
 <div class="barre-culte">
   <a class="bouton-lien" href="{% url 'cultes:liste' %}" title="Tous les cultes">←</a>
   {% if peut_modifier %}
-    <form class="form-titre" hx-post="{% url 'cultes:parametres' culte.pk %}" hx-trigger="change" hx-target="#espace" hx-swap="outerHTML">
+    <form class="form-titre" hx-post="{% url 'cultes:parametres' culte.uuid %}" hx-trigger="change" hx-target="#espace" hx-swap="outerHTML">
       <input class="titre-culte" name="titre" value="{{ culte.titre }}" maxlength="200" required aria-label="Nom du culte">
     </form>
-    <form hx-post="{% url 'cultes:parametres' culte.pk %}" hx-trigger="change" hx-target="#espace" hx-swap="outerHTML">
+    <form hx-post="{% url 'cultes:parametres' culte.uuid %}" hx-trigger="change" hx-target="#espace" hx-swap="outerHTML">
       <select name="statut" class="statut-choix" aria-label="Statut">
         {% for valeur, libelle in culte.STATUTS %}<option value="{{ valeur }}"{% if culte.statut == valeur %} selected{% endif %}>{{ libelle }}</option>{% endfor %}
       </select>
@@ -29,8 +30,8 @@
   <span class="date-culte masque-mobile">{{ culte.date|date:"l j F Y"|capfirst }}</span>
   <span id="indicateur" class="indicateur" aria-live="polite">{% if peut_modifier %}✓ Enregistré{% else %}Lecture seule{% endif %}</span>
   <span class="actions-culte">
-    <a class="bouton-exporter" href="{% url 'cultes:export_pptx' culte.pk %}" download title="Exporter le culte en PowerPoint (.pptx)">⇩ PowerPoint</a>
-    <a class="bouton-projeter" href="{% url 'cultes:projection' culte.pk %}" data-projeter title="Projeter depuis le début (F5) — Maj+F5 : depuis la diapo actuelle">▶ Projeter</a>
+    <a class="bouton-exporter" href="{% url 'cultes:export_pptx' culte.uuid %}" download title="Exporter le culte en PowerPoint (.pptx)">⇩ PowerPoint</a>
+    <a class="bouton-projeter" href="{% url 'cultes:projection' culte.uuid %}" data-projeter title="Projeter (F5) : diapo seule sur le projecteur, diapo suivante sur cet ordinateur. Maj+F5 : depuis la diapo actuelle">▶ Projeter</a>
   </span>
 </div>
 
@@ -56,12 +57,12 @@
       <span class="ruban-libelle">Culte</span>
     </div>
     <div class="ruban-groupe">
-      <a class="outil" href="{% url 'cultes:export_pptx' culte.pk %}" download><span class="outil-icone">⇩</span>Exporter en PowerPoint</a>
+      <a class="outil" href="{% url 'cultes:export_pptx' culte.uuid %}" download><span class="outil-icone">⇩</span>Exporter en PowerPoint</a>
       <span class="ruban-libelle">Exporter</span>
     </div>
     {% if perms.cultes.delete_culte %}
     <div class="ruban-groupe">
-      <a class="outil" href="{% url 'cultes:suppression' culte.pk %}"><span class="outil-icone">🗑</span>Supprimer le culte</a>
+      <a class="outil" href="{% url 'cultes:suppression' culte.uuid %}"><span class="outil-icone">🗑</span>Supprimer le culte</a>
       <span class="ruban-libelle">Gérer</span>
     </div>
     {% endif %}
@@ -157,22 +158,22 @@
   </div>
 
   <div class="ruban-panneau" data-panneau="creation" hidden>
-    <form class="ruban-groupe ruban-form" hx-post="{% url 'cultes:parametres' culte.pk %}" hx-trigger="change" hx-target="#espace" hx-swap="outerHTML">
+    <form class="ruban-groupe ruban-form" hx-post="{% url 'cultes:parametres' culte.uuid %}" hx-trigger="change" hx-target="#espace" hx-swap="outerHTML">
       <label>Texte de bienvenue
         <textarea name="texte_bienvenue" rows="2" placeholder="Vide : pas de diapo de bienvenue">{{ culte.texte_bienvenue }}</textarea>
       </label>
       <span class="ruban-libelle">Première diapo</span>
     </form>
-    <form class="ruban-groupe ruban-form" hx-post="{% url 'cultes:parametres' culte.pk %}" hx-trigger="change" hx-target="#espace" hx-swap="outerHTML">
+    <form class="ruban-groupe ruban-form" hx-post="{% url 'cultes:parametres' culte.uuid %}" hx-trigger="change" hx-target="#espace" hx-swap="outerHTML">
       <label>Lignes par diapo
         <input type="number" name="lignes_par_diapo" min="1" max="12" value="{{ culte.lignes_par_diapo }}">
       </label>
       <span class="ruban-libelle">Paroles</span>
     </form>
-    <form class="ruban-groupe ruban-form" hx-post="{% url 'cultes:parametres' culte.pk %}" hx-trigger="change" hx-target="#espace" hx-swap="outerHTML">
+    <form class="ruban-groupe ruban-form" hx-post="{% url 'cultes:parametres' culte.uuid %}" hx-trigger="change" hx-target="#espace" hx-swap="outerHTML">
       <label>Thème
         <select name="theme">
-          {% for t in themes %}<option value="{{ t.pk }}"{% if t.pk == theme.pk %} selected{% endif %}>{{ t.nom }}</option>{% endfor %}
+          {% for t in themes %}<option value="{{ t.uuid }}"{% if t.pk == theme.pk %} selected{% endif %}>{{ t.nom }}</option>{% endfor %}
         </select>
       </label>
       {% if perms.projection.view_theme %}<a class="bouton-lien lien-themes" href="{% url 'projection:theme_liste' %}">Gérer les thèmes</a>{% endif %}
@@ -183,13 +184,13 @@
 
   <div class="ruban-panneau" data-panneau="diaporama" hidden>
     <div class="ruban-groupe">
-      <a class="outil" href="{% url 'cultes:projection' culte.pk %}" data-projeter title="F5"><span class="outil-icone">▶</span>À partir du début</a>
-      <a class="outil" href="{% url 'cultes:projection' culte.pk %}" data-projeter="actuelle" title="Maj+F5"><span class="outil-icone">▷</span>À partir de la diapo actuelle</a>
-      <a class="outil" href="{% url 'cultes:projection' culte.pk %}?presentateur=1" data-projeter="presentateur" title="Diapo suivante, chronomètre ; pilote l'écran de projection"><span class="outil-icone">⧉</span>Mode présentateur</a>
+      <a class="outil" href="{% url 'cultes:projection' culte.uuid %}" data-projeter title="F5 — présentateur sur cet ordinateur, diapo seule sur le projecteur"><span class="outil-icone">▶</span>À partir du début</a>
+      <a class="outil" href="{% url 'cultes:projection' culte.uuid %}" data-projeter="actuelle" title="Maj+F5"><span class="outil-icone">▷</span>À partir de la diapo actuelle</a>
+      <a class="outil" href="{% url 'cultes:projection' culte.uuid %}" data-projeter="ecran" title="Un seul écran : la diapo en plein écran sur cet ordinateur"><span class="outil-icone">▭</span>Sur cet écran seulement</a>
       <span class="ruban-libelle">Projection</span>
     </div>
     <div class="ruban-groupe">
-      <a class="outil" href="{% url 'cultes:export_pptx' culte.pk %}" download><span class="outil-icone">⇩</span>Exporter en PowerPoint</a>
+      <a class="outil" href="{% url 'cultes:export_pptx' culte.uuid %}" download><span class="outil-icone">⇩</span>Exporter en PowerPoint</a>
       <span class="ruban-libelle">Exporter</span>
     </div>
   </div>
@@ -233,9 +234,9 @@
   </label>
   <label>Chercher dans la bibliothèque
     <input type="search" name="q" placeholder="Titre, auteur, tag ou paroles…" autocomplete="off"
-           hx-get="{% url 'cultes:chercher_chants' culte.pk %}" hx-trigger="input changed delay:250ms, search" hx-target="#resultats-chants">
+           hx-get="{% url 'cultes:chercher_chants' culte.uuid %}" hx-trigger="input changed delay:250ms, search" hx-target="#resultats-chants">
   </label>
-  <div id="resultats-chants" class="resultats-chants" hx-get="{% url 'cultes:chercher_chants' culte.pk %}" hx-trigger="load"></div>
+  <div id="resultats-chants" class="resultats-chants" hx-get="{% url 'cultes:chercher_chants' culte.uuid %}" hx-trigger="load"></div>
   {% if perms.chants.add_chant %}
     <p class="aide">Le chant n'est pas dans la bibliothèque ? <button type="button" class="bouton-lien" data-dialogue="dlg-nouveau-chant">Créer un nouveau chant</button></p>
   {% endif %}
@@ -243,7 +244,7 @@
 
 {% if perms.chants.add_chant %}
 <dialog id="dlg-nouveau-chant" class="dialogue" aria-labelledby="dlg-nouveau-chant-titre">
-  <form hx-post="{% url 'cultes:creer_chant' culte.pk %}" hx-target="#espace" hx-swap="outerHTML" data-ferme-apres>
+  <form hx-post="{% url 'cultes:creer_chant' culte.uuid %}" hx-target="#espace" hx-swap="outerHTML" data-ferme-apres>
     <div class="dialogue-entete">
       <h2 id="dlg-nouveau-chant-titre">Nouveau chant</h2>
       <button type="button" class="bouton-lien" data-fermer>✕</button>
@@ -267,7 +268,7 @@
 {% endif %}
 
 <dialog id="dlg-texte" class="dialogue" aria-labelledby="dlg-texte-titre">
-  <form hx-post="{% url 'cultes:ajouter_texte' culte.pk %}" hx-target="#espace" hx-swap="outerHTML" data-ferme-apres>
+  <form hx-post="{% url 'cultes:ajouter_texte' culte.uuid %}" hx-target="#espace" hx-swap="outerHTML" data-ferme-apres>
     <div class="dialogue-entete">
       <h2 id="dlg-texte-titre">Nouvelle diapo de texte</h2>
       <button type="button" class="bouton-lien" data-fermer>✕</button>
@@ -285,7 +286,7 @@
 
 {% if perms.cultes.add_culte %}
 <dialog id="dlg-dupliquer" class="dialogue" aria-labelledby="dlg-dupliquer-titre">
-  <form method="post" action="{% url 'cultes:dupliquer' culte.pk %}">
+  <form method="post" action="{% url 'cultes:dupliquer' culte.uuid %}">
     {% csrf_token %}
     <div class="dialogue-entete">
       <h2 id="dlg-dupliquer-titre">Dupliquer ce culte</h2>

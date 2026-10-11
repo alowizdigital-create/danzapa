@@ -570,19 +570,28 @@
     }
   }, true);
 
-  // Projection : F5 depuis le début, Maj+F5 depuis la diapo actuelle (comme PowerPoint).
+  // Projection, comme PowerPoint : sur l'ordinateur la vue présentateur (diapo
+  // actuelle + suivante), sur le projecteur la diapo en cours seulement.
+  // F5 : depuis le début ; Maj+F5 : depuis la diapo actuelle.
   function urlProjection(depuisActuelle) {
     const lien = document.querySelector("[data-projeter]");
     if (!lien) return null;
     const url = new URL(lien.href, window.location.href);
+    url.search = "";
     if (depuisActuelle && numeroCourant) url.searchParams.set("depuis", numeroCourant);
     return url;
   }
 
-  function projeter(depuisActuelle) {
+  async function projeter(depuisActuelle, surCetEcran = false) {
     const url = urlProjection(depuisActuelle);
     if (!url) return;
-    sauverMaintenant().finally(() => (window.location.href = url.href));
+    if (!surCetEcran && window.danzapaEcrans) {
+      // Ouverte pendant le clic : sinon le navigateur bloque la fenêtre.
+      await window.danzapaEcrans.ouvrirProjecteur(url.href);
+      url.searchParams.set("presentateur", "1");
+    }
+    await sauverMaintenant().catch(() => {});
+    window.location.href = url.href;
   }
 
   document.addEventListener("keydown", (evt) => {
@@ -593,9 +602,9 @@
 
   document.addEventListener("click", (evt) => {
     const lien = evt.target.closest("[data-projeter]");
-    if (!lien || lien.dataset.projeter === "presentateur") return;
+    if (!lien) return;
     evt.preventDefault();
-    projeter(lien.dataset.projeter === "actuelle");
+    projeter(lien.dataset.projeter === "actuelle", lien.dataset.projeter === "ecran");
   });
 
   // Dernière chance d'envoyer une saisie en cours si on quitte la page.

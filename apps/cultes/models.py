@@ -1,3 +1,5 @@
+import uuid
+
 from django.conf import settings
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models, transaction
@@ -16,6 +18,9 @@ def titre_pour(date):
 
 
 class Culte(models.Model):
+    # Identifiant public (adresses, pages, JavaScript) ; la clé entière reste interne.
+    uuid = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+
     BROUILLON = "brouillon"
     PRET = "pret"
     STATUTS = [(BROUILLON, "Brouillon"), (PRET, "Prêt")]
@@ -63,7 +68,7 @@ class Culte(models.Model):
         return self.titre
 
     def get_absolute_url(self):
-        return reverse("cultes:editeur", args=[self.pk])
+        return reverse("cultes:editeur", args=[self.uuid])
 
     def save(self, *args, **kwargs):
         if not self.titre:
@@ -121,6 +126,9 @@ class Culte(models.Model):
 
 
 class ElementCulte(models.Model):
+    # Identifiant public (adresses, pages, JavaScript) ; la clé entière reste interne.
+    uuid = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+
     CHANT = "chant"
     TEXTE = "texte"
     TYPES = [(CHANT, "Chant"), (TEXTE, "Texte libre")]

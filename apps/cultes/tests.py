@@ -50,14 +50,14 @@ class DiaposDuCulteTests(TestCase):
         self.assertEqual(liste[3].lignes[0], "De mon Dieu je suis l'enfant")
         self.assertEqual(liste[4].lignes[0], "2. Qui s'élance")
         self.assertEqual([d.numero for d in liste], [1, 2, 3, 4, 5])
-        self.assertEqual({d.chant_id for d in liste[1:]}, {self.chant.pk})
+        self.assertEqual({d.chant_id for d in liste[1:]}, {str(self.chant.uuid)})
 
     def test_reglages_de_la_diapo(self):
         piece = self.chant.diapos.first()
         piece.alignement, piece.echelle, piece.couleur_fond = "gauche", 150, "#123456"
         piece.save()
         diapo = diapos.diapos_du_culte(self.culte)[2]
-        self.assertEqual((diapo.alignement, diapo.echelle, diapo.couleur_fond, diapo.piece_id), ("gauche", 150, "#123456", piece.pk))
+        self.assertEqual((diapo.alignement, diapo.echelle, diapo.couleur_fond, diapo.piece_id), ("gauche", 150, "#123456", str(piece.uuid)))
 
     def test_paroles_collees_par_paquets(self):
         self.chant.remplacer_paroles(SANS_ATTENDRE, lignes_par_diapo=2)
@@ -106,13 +106,13 @@ class VuesTests(TestCase):
         self.client.force_login(self.editeur)
 
     def url(self, nom, *args):
-        return reverse(f"cultes:{nom}", args=[self.culte.pk, *args])
+        return reverse(f"cultes:{nom}", args=[self.culte.uuid, *args])
 
     def hx_post(self, url, donnees=None):
         return self.client.post(url, donnees or {}, headers={"HX-Request": "true"})
 
     def ajouter(self, chant, moment=""):
-        self.hx_post(self.url("ajouter_chant"), {"chant": chant.pk, "moment": moment})
+        self.hx_post(self.url("ajouter_chant"), {"chant": chant.uuid, "moment": moment})
         return self.culte.elements.last()
 
     def test_projection_sans_les_diapos_masquees(self):
@@ -134,7 +134,7 @@ class VuesTests(TestCase):
         self.assertEqual(self.client.get(self.url("projection"), {"depuis": "x"}).context["debut"], 0)
         presentateur = self.client.get(self.url("projection"), {"presentateur": "1"})
         self.assertContains(presentateur, 'data-mode="presentateur"')
-        self.assertContains(presentateur, "Ouvrir l'écran de projection")
+        self.assertContains(presentateur, "Ouvrir sur le projecteur")
         self.assertTrue(element.pk)
 
     def test_icones_projeter_et_exporter(self):
@@ -146,6 +146,18 @@ class VuesTests(TestCase):
         liste = self.client.get(reverse("cultes:liste"))
         self.assertContains(liste, self.url("projection"))
         self.assertContains(liste, self.url("export_pptx"))
+
+    def test_identifiants_publics_en_uuid(self):
+        import re
+
+        self.ajouter(self.chant, "Louange")
+        page = self.client.get(self.url("editeur")).content.decode()
+        self.assertIn(f"/cultes/{self.culte.uuid}/", page)
+        # Aucune adresse /cultes/<nombre>/ ni attribut data-element/chant/piece numérique.
+        self.assertFalse(re.search(r"/cultes/\d+/", page))
+        self.assertFalse(re.search(r'data-(element|chant|piece|culte|edition|selection)="\d+"', page))
+        self.assertEqual(self.client.get(f"/cultes/{self.culte.pk}/").status_code, 404)
+        self.assertEqual(self.hx_post(self.url("reordonner"), {"ordre": ["12"]}).status_code, 400)
 
     def test_creation_d_un_culte(self):
         reponse = self.client.post(reverse("cultes:creation"), {"date": "2026-09-27", "titre": ""})
@@ -160,7 +172,7 @@ class VuesTests(TestCase):
         self.assertContains(reponse, 'id="moment-chant" name="moment" value="Cantique d&#x27;entrée"')
 
     def test_ajout_d_un_chant(self):
-        reponse = self.hx_post(self.url("ajouter_chant"), {"chant": self.chant.pk, "moment": MOMENT_PAR_DEFAUT})
+        reponse = self.hx_post(self.url("ajouter_chant"), {"chant": self.chant.uuid, "moment": MOMENT_PAR_DEFAUT})
         self.assertEqual(reponse.status_code, 200)
         self.assertTemplateUsed(reponse, "cultes/_espace.html")
         self.assertContains(reponse, "Cantique d&#x27;entrée : Sans attendre je veux tendre")
@@ -168,7 +180,7 @@ class VuesTests(TestCase):
         self.assertEqual((element.chant, element.moment, element.ordre), (self.chant, MOMENT_PAR_DEFAUT, 1))
 
     def test_ajout_sans_htmx_redirige(self):
-        reponse = self.client.post(self.url("ajouter_chant"), {"chant": self.chant.pk})
+        reponse = self.client.post(self.url("ajouter_chant"), {"chant": self.chant.uuid})
         self.assertRedirects(reponse, self.culte.get_absolute_url())
 
     def test_recherche_de_chants(self):
@@ -193,8 +205,8 @@ class VuesTests(TestCase):
         element = self.culte.elements.get()
         piece = chant.diapos.get()
         self.assertEqual((element.chant, element.moment, piece.contenu), (chant, "Offrande", ""))
-        self.assertContains(reponse, f'data-edition="{chant.pk}"')
-        self.assertContains(reponse, f'data-piece="{piece.pk}"')
+        self.assertContains(reponse, f'data-edition="{chant.uuid}"')
+        self.assertContains(reponse, f'data-piece="{piece.uuid}"')
         self.assertEqual(chant.cree_par, self.editeur)
 
     def test_nouveau_chant_avec_paroles_collees(self):
@@ -208,47 +220,47 @@ class VuesTests(TestCase):
 
     def test_proprietes_de_l_element(self):
         element = self.ajouter(self.chant)
-        self.hx_post(self.url("modifier_element", element.pk), {"moment": "Louange"})
+        self.hx_post(self.url("modifier_element", element.uuid), {"moment": "Louange"})
         element.refresh_from_db()
         self.assertEqual(element.moment, "Louange")
 
     def test_masquer_puis_afficher(self):
         element = self.ajouter(self.chant)
-        self.hx_post(self.url("basculer_masque", element.pk))
+        self.hx_post(self.url("basculer_masque", element.uuid))
         element.refresh_from_db()
         self.assertTrue(element.masque)
-        self.hx_post(self.url("basculer_masque", element.pk))
+        self.hx_post(self.url("basculer_masque", element.uuid))
         element.refresh_from_db()
         self.assertFalse(element.masque)
 
     def test_reordonner_et_deplacer(self):
         a = self.ajouter(self.chant)
         b = self.ajouter(self.autre)
-        self.hx_post(self.url("reordonner"), {"ordre": [b.pk, a.pk]})
+        self.hx_post(self.url("reordonner"), {"ordre": [b.uuid, a.uuid]})
         self.assertEqual(list(self.culte.elements.values_list("pk", flat=True)), [b.pk, a.pk])
-        self.hx_post(self.url("deplacer_element", a.pk), {"sens": "haut"})
+        self.hx_post(self.url("deplacer_element", a.uuid), {"sens": "haut"})
         self.assertEqual(list(self.culte.elements.values_list("pk", flat=True)), [a.pk, b.pk])
-        self.hx_post(self.url("deplacer_element", a.pk), {"sens": "haut"})  # déjà en tête
+        self.hx_post(self.url("deplacer_element", a.uuid), {"sens": "haut"})  # déjà en tête
         self.assertEqual(list(self.culte.elements.values_list("pk", flat=True)), [a.pk, b.pk])
 
     def test_reordonner_ignore_les_elements_d_un_autre_culte(self):
         a = self.ajouter(self.chant)
         autre_culte = Culte.objects.create(date=date(2026, 10, 4))
         intrus = ElementCulte.objects.create(culte=autre_culte, ordre=7, type=ElementCulte.TEXTE)
-        self.hx_post(self.url("reordonner"), {"ordre": [intrus.pk, a.pk]})
+        self.hx_post(self.url("reordonner"), {"ordre": [intrus.uuid, a.uuid]})
         intrus.refresh_from_db()
         self.assertEqual(intrus.ordre, 7)
 
     def test_element_d_un_autre_culte_introuvable(self):
         autre_culte = Culte.objects.create(date=date(2026, 10, 4))
         intrus = ElementCulte.objects.create(culte=autre_culte, ordre=1, type=ElementCulte.TEXTE)
-        reponse = self.hx_post(self.url("supprimer_element", intrus.pk))
+        reponse = self.hx_post(self.url("supprimer_element", intrus.uuid))
         self.assertEqual(reponse.status_code, 404)
 
     def test_retirer_un_chant_du_culte(self):
         a = self.ajouter(self.chant)
         b = self.ajouter(self.autre)
-        self.hx_post(self.url("supprimer_element", a.pk))
+        self.hx_post(self.url("supprimer_element", a.uuid))
         self.assertEqual(list(self.culte.elements.values_list("pk", "ordre")), [(b.pk, 1)])
         self.assertTrue(Chant.objects.filter(pk=self.chant.pk).exists())
 
@@ -279,8 +291,8 @@ class VuesTests(TestCase):
         reponse = self.client.get(self.culte.get_absolute_url())
         self.assertEqual(reponse.status_code, 200)
         self.assertNotContains(reponse, 'data-panneau="insertion"')
-        for url in (self.url("ajouter_chant"), self.url("parametres"), self.url("supprimer_element", element.pk)):
-            self.assertEqual(self.hx_post(url, {"chant": self.chant.pk}).status_code, 403)
+        for url in (self.url("ajouter_chant"), self.url("parametres"), self.url("supprimer_element", element.uuid)):
+            self.assertEqual(self.hx_post(url, {"chant": self.chant.uuid}).status_code, 403)
         self.assertEqual(self.client.post(reverse("cultes:creation"), {"date": "2026-09-27"}).status_code, 403)
 
     def test_get_refuse_sur_les_actions(self):
@@ -301,18 +313,18 @@ class SaisieDesChantsTests(TestCase):
         self.pieces = list(self.chant.diapos.all())
 
     def url(self, nom, *args):
-        return reverse(f"cultes:{nom}", args=[self.culte.pk, self.chant.pk, *args])
+        return reverse(f"cultes:{nom}", args=[self.culte.uuid, self.chant.uuid, *args])
 
     def hx_post(self, url, donnees=None):
         return self.client.post(url, donnees or {}, headers={"HX-Request": "true"})
 
     def ordre(self):
-        return list(self.chant.diapos.values_list("pk", flat=True))
+        return list(self.chant.diapos.values_list("uuid", flat=True))
 
     def test_sauvegarde_automatique_d_une_diapo(self):
         piece = self.pieces[0]
         reponse = self.client.post(
-            self.url("enregistrer_diapo", piece.pk),
+            self.url("enregistrer_diapo", piece.uuid),
             {"contenu": '1. Sans <b>attendre</b><div><font color="#ffd700">Je veux</font> tendre</div><script>x</script>',
              "alignement": "gauche", "echelle": "120", "couleur_fond": "#001122"},
         )
@@ -330,12 +342,12 @@ class SaisieDesChantsTests(TestCase):
 
     def test_taille_et_police_de_la_diapo(self):
         piece = self.pieces[0]
-        url = self.url("enregistrer_diapo", piece.pk)
+        url = self.url("enregistrer_diapo", piece.uuid)
         donnees = json.loads(self.client.post(url, {"taille": "72", "police": "Georgia"}).content)
         self.assertEqual((donnees["taille_pt"], donnees["taille_choisie"], donnees["police"]), (72, 72, "Georgia"))
         piece.refresh_from_db()
         self.assertEqual((piece.taille, piece.police), (72, "Georgia"))
-        editeur = self.client.get(reverse("cultes:editeur", args=[self.culte.pk])).content.decode()
+        editeur = self.client.get(reverse("cultes:editeur", args=[self.culte.uuid])).content.decode()
         self.assertIn('data-taille="72" data-taille-pt="72" data-police="Georgia"', editeur)
         self.assertIn("--police: Georgia,", editeur)
         # Vide : retour à la taille automatique et à la police du thème.
@@ -353,11 +365,11 @@ class SaisieDesChantsTests(TestCase):
         self.assertEqual((piece.police, piece.taille), ("", 8))
 
     def test_fond_pour_tout_le_chant(self):
-        url = reverse("cultes:fond_chant", args=[self.culte.pk, self.chant.pk])
-        reponse = self.hx_post(url, {"couleur_fond": "#0b1f4d", "piece": self.pieces[1].pk})
+        url = reverse("cultes:fond_chant", args=[self.culte.uuid, self.chant.uuid])
+        reponse = self.hx_post(url, {"couleur_fond": "#0b1f4d", "piece": self.pieces[1].uuid})
         self.assertEqual(reponse.status_code, 200)
         self.assertEqual(set(self.chant.diapos.values_list("couleur_fond", flat=True)), {"#0b1f4d"})
-        self.assertContains(reponse, f'data-piece="{self.pieces[1].pk}"')
+        self.assertContains(reponse, f'data-piece="{self.pieces[1].uuid}"')
         self.hx_post(url, {"couleur_fond": ""})
         self.assertEqual(set(self.chant.diapos.values_list("couleur_fond", flat=True)), {""})
         self.assertEqual(self.hx_post(url, {"couleur_fond": "bleu"}).status_code, 400)
@@ -365,27 +377,27 @@ class SaisieDesChantsTests(TestCase):
         self.assertEqual(self.hx_post(url, {"couleur_fond": "#000000"}).status_code, 403)
 
     def test_reglages_invalides_refuses(self):
-        reponse = self.client.post(self.url("enregistrer_diapo", self.pieces[0].pk), {"couleur_fond": "red;x"})
+        reponse = self.client.post(self.url("enregistrer_diapo", self.pieces[0].uuid), {"couleur_fond": "red;x"})
         self.assertEqual(reponse.status_code, 400)
 
     def test_ajouter_apres_et_dupliquer(self):
         premiere = self.pieces[0]
-        reponse = self.hx_post(self.url("ajouter_diapo"), {"apres": premiere.pk})
+        reponse = self.hx_post(self.url("ajouter_diapo"), {"apres": premiere.uuid})
         ids = self.ordre()
         self.assertEqual(len(ids), 4)
-        nouvelle = DiapoChant.objects.get(pk=ids[1])
+        nouvelle = DiapoChant.objects.get(uuid=ids[1])
         self.assertEqual(nouvelle.contenu, "")
-        self.assertContains(reponse, f'data-piece="{nouvelle.pk}"')
-        self.hx_post(self.url("ajouter_diapo"), {"dupliquer": premiere.pk})
+        self.assertContains(reponse, f'data-piece="{nouvelle.uuid}"')
+        self.hx_post(self.url("ajouter_diapo"), {"dupliquer": premiere.uuid})
         ids = self.ordre()
-        self.assertEqual(DiapoChant.objects.get(pk=ids[1]).texte, premiere.texte)
+        self.assertEqual(DiapoChant.objects.get(uuid=ids[1]).texte, premiere.texte)
 
     def test_ajouter_en_fin_sans_reference(self):
         self.hx_post(self.url("ajouter_diapo"))
-        self.assertEqual(DiapoChant.objects.get(pk=self.ordre()[-1]).contenu, "")
+        self.assertEqual(DiapoChant.objects.get(uuid=self.ordre()[-1]).contenu, "")
 
     def test_supprimer_deplacer_reordonner(self):
-        a, b, c = (p.pk for p in self.pieces)
+        a, b, c = (p.uuid for p in self.pieces)
         self.hx_post(self.url("deplacer_diapo", c), {"sens": "haut"})
         self.assertEqual(self.ordre(), [a, c, b])
         self.hx_post(self.url("reordonner_diapos"), {"ordre": [b, a, c]})
@@ -408,7 +420,7 @@ class SaisieDesChantsTests(TestCase):
         self.assertContains(reponse, 'data-edition=""')
 
     def test_proprietes_en_fenetre_et_non_sous_la_diapo(self):
-        reponse = self.client.get(reverse("cultes:editeur", args=[self.culte.pk]))
+        reponse = self.client.get(reverse("cultes:editeur", args=[self.culte.uuid]))
         self.assertNotContains(reponse, "proprietes-zone")
         self.assertNotContains(reponse, "{#")
         self.assertNotContains(reponse, "Retirer du culte</button>\n          </div>")
@@ -418,22 +430,22 @@ class SaisieDesChantsTests(TestCase):
     def test_chant_hors_du_culte_introuvable(self):
         autre = Chant.objects.create(titre="Autre")
         piece = DiapoChant.objects.create(chant=autre, ordre=1)
-        url = reverse("cultes:enregistrer_diapo", args=[self.culte.pk, autre.pk, piece.pk])
+        url = reverse("cultes:enregistrer_diapo", args=[self.culte.uuid, autre.uuid, piece.uuid])
         self.assertEqual(self.client.post(url, {"contenu": "x"}).status_code, 404)
 
     def test_lecteur_ne_peut_pas_modifier(self):
         self.client.force_login(self.lecteur)
         piece = self.pieces[0]
-        self.assertEqual(self.client.post(self.url("enregistrer_diapo", piece.pk), {"contenu": "x"}).status_code, 403)
+        self.assertEqual(self.client.post(self.url("enregistrer_diapo", piece.uuid), {"contenu": "x"}).status_code, 403)
         self.assertEqual(self.hx_post(self.url("ajouter_diapo")).status_code, 403)
-        self.assertEqual(self.hx_post(reverse("cultes:creer_chant", args=[self.culte.pk]), {"titre": "X"}).status_code, 403)
+        self.assertEqual(self.hx_post(reverse("cultes:creer_chant", args=[self.culte.uuid]), {"titre": "X"}).status_code, 403)
         reponse = self.client.get(self.culte.get_absolute_url())
         self.assertNotContains(reponse, 'data-format="bold"')
 
     def test_modification_visible_dans_les_autres_cultes(self):
         autre = Culte.objects.create(date=date(2026, 9, 27))
         ElementCulte.objects.create(culte=autre, ordre=1, type=ElementCulte.CHANT, chant=self.chant)
-        self.client.post(self.url("enregistrer_diapo", self.pieces[0].pk), {"contenu": "1. Corrigé"})
+        self.client.post(self.url("enregistrer_diapo", self.pieces[0].uuid), {"contenu": "1. Corrigé"})
         self.assertEqual(diapos.diapos_du_culte(autre)[2].lignes, ["1. Corrigé"])
 
     def test_suppression_de_la_bibliotheque(self):
@@ -442,7 +454,7 @@ class SaisieDesChantsTests(TestCase):
         self.assertContains(reponse, "utilisé dans 1 culte")
         self.assertTrue(Chant.objects.filter(pk=self.chant.pk).exists())
         libre = Chant.objects.create(titre="Libre")
-        reponse = self.hx_post(reverse("cultes:supprimer_chant", args=[self.culte.pk, libre.pk]))
+        reponse = self.hx_post(reverse("cultes:supprimer_chant", args=[self.culte.uuid, libre.uuid]))
         self.assertContains(reponse, "a été supprimé")
         self.assertFalse(Chant.objects.filter(pk=libre.pk).exists())
 
@@ -451,4 +463,4 @@ class SaisieDesChantsTests(TestCase):
         for attendu in ('data-format="bold"', 'data-ouvrir-couleurs="texte"', 'data-ouvrir-couleurs="fond"',
                         'data-palette="texte"', 'data-fond-chant', 'data-diapo-action="ajouter"', 'id="dlg-nouveau-chant"'):
             self.assertContains(reponse, attendu)
-        self.assertContains(reponse, f'data-piece="{self.pieces[0].pk}"')
+        self.assertContains(reponse, f'data-piece="{self.pieces[0].uuid}"')

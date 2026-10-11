@@ -64,6 +64,16 @@
     if (canal) canal.postMessage({ type: "etat", index, ecran });
   }
 
+  // Présentateur : indique si la fenêtre du projecteur est ouverte.
+  function projecteurConnecte(connecte) {
+    const etat = document.querySelector("[data-etat-projecteur]");
+    if (!etat) return;
+    etat.textContent = connecte ? "Projecteur : connecté ✓" : "Projecteur : non ouvert";
+    etat.classList.toggle("connecte", connecte);
+    const bouton = document.querySelector("[data-ouvrir-projection]");
+    if (bouton) bouton.textContent = connecte ? "↻ Rouvrir sur le projecteur" : "▶ Ouvrir sur le projecteur";
+  }
+
   if (canal) {
     canal.onmessage = (evt) => {
       const m = evt.data || {};
@@ -71,11 +81,22 @@
         index = Math.max(0, Math.min(Number(m.index) || 0, total));
         ecran = m.ecran || "";
         afficher();
-      } else if (m.type === "demande" && presentateur) {
-        envoyer(); // une fenêtre de projection vient de s'ouvrir
+      } else if (presentateur && m.type === "demande") {
+        projecteurConnecte(true);
+        envoyer(); // la fenêtre du projecteur vient de s'ouvrir : lui donner la diapo
+      } else if (presentateur && m.type === "present") {
+        projecteurConnecte(true);
+      } else if (presentateur && m.type === "ferme") {
+        projecteurConnecte(false);
+      } else if (!presentateur && m.type === "presence?") {
+        canal.postMessage({ type: "present" });
       }
     };
-    if (!presentateur) canal.postMessage({ type: "demande" });
+    if (presentateur) canal.postMessage({ type: "presence?" });
+    else {
+      canal.postMessage({ type: "demande" });
+      window.addEventListener("pagehide", () => canal.postMessage({ type: "ferme" }));
+    }
   }
 
   // Le navigateur n'accorde le plein écran qu'après un geste (clic ou touche) :
@@ -147,8 +168,9 @@
       if (ecranBouton) return basculerEcran(ecranBouton.dataset.ecranBouton);
       if (evt.target.closest("[data-chrono]")) return (debutChrono = Date.now());
       if (evt.target.closest("[data-ouvrir-projection]")) {
-        const url = `${corps.dataset.projection}?depuis=1`;
-        window.open(url, "danzapa-projection", "popup,width=960,height=540");
+        window.danzapaEcrans.ouvrirProjecteur(corps.dataset.projection).then((fenetre) => {
+          if (!fenetre) alert("Le navigateur a bloqué la fenêtre du projecteur : autorisez les fenêtres pop-up pour ce site, puis réessayez.");
+        });
       }
       return;
     }

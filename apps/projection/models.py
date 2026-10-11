@@ -1,3 +1,5 @@
+import uuid
+
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator, RegexValidator
 from django.db import models
@@ -48,6 +50,9 @@ def couleur(**kwargs):
 
 
 class Theme(models.Model):
+    # Identifiant public (adresses, pages, JavaScript) ; la clé entière reste interne.
+    uuid = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+
     nom = models.CharField(max_length=100, unique=True)
 
     couleur_fond = couleur(verbose_name="couleur de fond", default="#000000")
@@ -82,7 +87,7 @@ class Theme(models.Model):
         return self.nom
 
     def get_absolute_url(self):
-        return reverse("projection:theme_modification", args=[self.pk])
+        return reverse("projection:theme_modification", args=[self.uuid])
 
     @classmethod
     def par_defaut(cls):

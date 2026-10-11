@@ -86,7 +86,12 @@ danzapa/
 
 ## Projeter un culte
 
-Dans l'éditeur, **▶ Projeter** (ou **F5**) lance le diaporama depuis le début ; **Maj+F5** ou l'onglet **Diaporama** le lance depuis la diapo sélectionnée. Les éléments masqués ne sont pas projetés.
+Dans l'éditeur, **▶ Projeter** (ou **F5**) lance le diaporama depuis le début, **Maj+F5** depuis la diapo sélectionnée. Comme PowerPoint avec deux écrans :
+
+- **sur le projecteur** : une fenêtre qui n'affiche que la diapo en cours (Chrome et Edge la placent sur le second écran, en plein écran, si on autorise la « gestion des fenêtres » ; sinon, la faire glisser sur le projecteur puis cliquer dedans) ;
+- **sur l'ordinateur** : la vue présentateur, avec la diapo actuelle, la suivante, la liste des diapos, un chronomètre et l'état « Projecteur : connecté ✓ ».
+
+Avec un seul écran : onglet **Diaporama → Sur cet écran seulement**. Les éléments masqués ne sont pas projetés.
 
 | Touche | Action |
 |---|---|
@@ -97,8 +102,6 @@ Dans l'éditeur, **▶ Projeter** (ou **F5**) lance le diaporama depuis le débu
 | B ou . / W ou , | Écran noir / blanc (même touche pour revenir) |
 | F | Plein écran |
 | Échap | Quitter le plein écran, puis revenir à l'éditeur |
-
-**Mode présentateur** (onglet Diaporama) : diapo actuelle et suivante, chronomètre et liste des diapos. Le bouton « Ouvrir l'écran de projection » ouvre une seconde fenêtre, à placer sur le vidéoprojecteur, qui suit la vue présentateur.
 
 **⇩ PowerPoint** (à côté de Projeter, ou dans la liste des cultes) télécharge le culte en `.pptx`.
 

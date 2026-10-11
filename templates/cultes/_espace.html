@@ -1,5 +1,5 @@
 {# Vignettes, diapo courante, propriétés et barre d'état. Renvoyé après chaque modification (HTMX). #}
-<div id="espace" class="espace{% if theme.image_bienvenue %} avec-image-bienvenue{% endif %}" data-selection="{{ selection|default_if_none:'' }}" data-edition="{{ edition|default_if_none:'' }}" data-piece="{{ piece|default_if_none:'' }}" data-culte="{{ culte.pk }}" style="{{ theme.style_css }}">
+<div id="espace" class="espace{% if theme.image_bienvenue %} avec-image-bienvenue{% endif %}" data-selection="{{ selection|default_if_none:'' }}" data-edition="{{ edition|default_if_none:'' }}" data-piece="{{ piece|default_if_none:'' }}" data-culte="{{ culte.uuid }}" style="{{ theme.style_css }}">
   <datalist id="liste-moments">{% for m in moments %}<option value="{{ m }}">{% endfor %}</datalist>
 
   <aside class="vignettes" aria-label="Diapositives">
@@ -14,16 +14,16 @@
       </div>
     {% endif %}{% endfor %}
 
-    <div class="groupes"{% if peut_modifier %} data-reordonner="{% url 'cultes:reordonner' culte.pk %}"{% endif %}>
+    <div class="groupes"{% if peut_modifier %} data-reordonner="{% url 'cultes:reordonner' culte.uuid %}"{% endif %}>
       {% for groupe in groupes %}{% if groupe.element %}
-        <div class="groupe{% if groupe.element.masque %} groupe-masque{% endif %}" data-element="{{ groupe.element.pk }}"{% if groupe.element.chant_id %} data-chant="{{ groupe.element.chant_id }}" data-reordonner-diapos="{% url 'cultes:reordonner_diapos' culte.pk groupe.element.chant_id %}"{% endif %}>
+        <div class="groupe{% if groupe.element.masque %} groupe-masque{% endif %}" data-element="{{ groupe.element.uuid }}"{% if groupe.element.chant_id %} data-chant="{{ groupe.element.chant.uuid }}" data-reordonner-diapos="{% url 'cultes:reordonner_diapos' culte.uuid groupe.element.chant.uuid %}"{% endif %}>
           <div class="groupe-entete" title="{% if peut_modifier %}Glisser pour déplacer tout l'élément{% endif %}">
             {% if peut_modifier %}<span class="poignee" aria-hidden="true">⠿</span>{% endif %}
             <span class="groupe-nom">{{ groupe.element.nom }}</span>
             {% if groupe.element.masque %}<span class="badge">masqué</span>{% endif %}
           </div>
           {% for diapo in groupe.diapos %}
-            <button type="button" class="vignette" data-numero="{{ diapo.numero }}" data-element="{{ groupe.element.pk }}"{% if diapo.chant_id %} data-chant="{{ diapo.chant_id }}"{% endif %}{% if diapo.piece_id %} data-piece="{{ diapo.piece_id }}"{% endif %} title="{{ groupe.element.nom }} · {{ diapo.libelle }}">
+            <button type="button" class="vignette" data-numero="{{ diapo.numero }}" data-element="{{ groupe.element.uuid }}"{% if diapo.chant_id %} data-chant="{{ diapo.chant_id }}"{% endif %}{% if diapo.piece_id %} data-piece="{{ diapo.piece_id }}"{% endif %} title="{{ groupe.element.nom }} · {{ diapo.libelle }}">
               <span class="vignette-numero">{{ diapo.numero }}</span>
               {% include "cultes/_diapo.html" %}
             </button>
@@ -50,12 +50,12 @@
     déclenchés par le groupe « Élément du culte » du ruban.
   {% endcomment %}
   {% if peut_modifier %}{% for groupe in groupes %}{% with element=groupe.element %}{% if element %}
-  <dialog class="dialogue dlg-proprietes" data-element="{{ element.pk }}" aria-label="Propriétés de {{ element.nom }}">
+  <dialog class="dialogue dlg-proprietes" data-element="{{ element.uuid }}" aria-label="Propriétés de {{ element.nom }}">
     {% if element.type == "chant" and peut_editer_chants %}
-      <form hx-post="{% url 'cultes:infos_chant' culte.pk element.chant_id %}" hx-target="#espace" hx-swap="outerHTML" data-ferme-apres>
+      <form hx-post="{% url 'cultes:infos_chant' culte.uuid element.chant.uuid %}" hx-target="#espace" hx-swap="outerHTML" data-ferme-apres>
       <input type="hidden" name="hors_edition" value="1">
     {% else %}
-      <form hx-post="{% url 'cultes:modifier_element' culte.pk element.pk %}" hx-target="#espace" hx-swap="outerHTML" data-ferme-apres>
+      <form hx-post="{% url 'cultes:modifier_element' culte.uuid element.uuid %}" hx-target="#espace" hx-swap="outerHTML" data-ferme-apres>
     {% endif %}
       <div class="dialogue-entete">
         <h2>{{ element.nom }} <small>{{ element.get_type_display }}{% if element.masque %} · masqué{% endif %}</small></h2>
@@ -82,10 +82,10 @@
       <button type="submit" class="bouton-principal">Enregistrer</button>
     </form>
     <div hidden>
-      <button type="button" data-action="masquer" hx-post="{% url 'cultes:basculer_masque' culte.pk element.pk %}" hx-target="#espace" hx-swap="outerHTML"></button>
-      <button type="button" data-action="monter" hx-post="{% url 'cultes:deplacer_element' culte.pk element.pk %}" hx-vals='{"sens": "haut"}' hx-target="#espace" hx-swap="outerHTML"></button>
-      <button type="button" data-action="descendre" hx-post="{% url 'cultes:deplacer_element' culte.pk element.pk %}" hx-vals='{"sens": "bas"}' hx-target="#espace" hx-swap="outerHTML"></button>
-      <button type="button" data-action="supprimer" hx-post="{% url 'cultes:supprimer_element' culte.pk element.pk %}" hx-target="#espace" hx-swap="outerHTML"
+      <button type="button" data-action="masquer" hx-post="{% url 'cultes:basculer_masque' culte.uuid element.uuid %}" hx-target="#espace" hx-swap="outerHTML"></button>
+      <button type="button" data-action="monter" hx-post="{% url 'cultes:deplacer_element' culte.uuid element.uuid %}" hx-vals='{"sens": "haut"}' hx-target="#espace" hx-swap="outerHTML"></button>
+      <button type="button" data-action="descendre" hx-post="{% url 'cultes:deplacer_element' culte.uuid element.uuid %}" hx-vals='{"sens": "bas"}' hx-target="#espace" hx-swap="outerHTML"></button>
+      <button type="button" data-action="supprimer" hx-post="{% url 'cultes:supprimer_element' culte.uuid element.uuid %}" hx-target="#espace" hx-swap="outerHTML"
               hx-confirm="Retirer « {{ element.nom }} » du culte ?{% if element.type == 'chant' %} Le chant reste dans la bibliothèque.{% endif %}"></button>
     </div>
   </dialog>

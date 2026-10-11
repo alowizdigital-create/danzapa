@@ -10,8 +10,8 @@
 </head>
 {# Diaporama plein écran : une diapo à la fois, rendue comme dans l'éditeur (cultes/_diapo.html). #}
 <body class="projection{% if theme.image_bienvenue %} avec-image-bienvenue{% endif %}" style="{{ theme.style_css }}"
-      data-mode="projection" data-debut="{{ debut }}" data-canal="danzapa-projection-{{ culte.pk }}"
-      data-retour="{% url 'cultes:editeur' culte.pk %}">
+      data-mode="projection" data-debut="{{ debut }}" data-canal="danzapa-projection-{{ culte.uuid }}"
+      data-retour="{% url 'cultes:editeur' culte.uuid %}">
   <main class="projection-scene" aria-live="polite">
     {% for diapo in diapos %}
       <div class="projection-diapo" data-diapo hidden>{% include "cultes/_diapo.html" %}</div>

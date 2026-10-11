@@ -21,7 +21,9 @@ EXEMPLES = [
 
 
 class AccesMixin(LoginRequiredMixin, PermissionRequiredMixin):
-    pass
+    # Les adresses désignent un thème par son UUID public, jamais par sa clé interne.
+    slug_field = "uuid"
+    slug_url_kwarg = "uuid"
 
 
 class ThemeListe(AccesMixin, ListView):

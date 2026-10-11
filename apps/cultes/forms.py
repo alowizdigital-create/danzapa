@@ -31,7 +31,10 @@ def parametres_form(donnees, instance):
     champs = [c for c in CHAMPS_PARAMETRES if c in donnees]
     if not champs:
         return None
-    return modelform_factory(Culte, fields=champs)(donnees, instance=instance)
+    form = modelform_factory(Culte, fields=champs)(donnees, instance=instance)
+    if "theme" in form.fields:
+        form.fields["theme"].to_field_name = "uuid"  # le thème est choisi par son UUID
+    return form
 
 
 class ElementForm(forms.ModelForm):
@@ -53,5 +56,5 @@ class TexteLibreForm(forms.ModelForm):
 
 
 class AjoutChantForm(forms.Form):
-    chant = forms.IntegerField()
+    chant = forms.UUIDField()
     moment = forms.CharField(max_length=100, required=False)
