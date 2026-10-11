@@ -5,6 +5,9 @@
 
   const corps = document.body;
   const presentateur = corps.dataset.mode === "presentateur";
+  // Fenêtre du projecteur, pilotée par la vue présentateur : les touches ne font
+  // que changer de diapo (jamais de plein écran, jamais de retour à l'éditeur).
+  const projecteur = !presentateur && new URLSearchParams(window.location.search).get("projecteur") === "1";
   const diapos = Array.from(document.querySelectorAll("[data-diapo]"));
   const total = diapos.length;
   const canal = "BroadcastChannel" in window ? new BroadcastChannel(corps.dataset.canal) : null;
@@ -121,13 +124,13 @@
 
   function quitter() {
     if (document.fullscreenElement) document.exitFullscreen();
-    else window.location.href = corps.dataset.retour;
+    else if (!projecteur) window.location.href = corps.dataset.retour;
   }
 
   document.addEventListener("keydown", (evt) => {
     if (evt.ctrlKey || evt.metaKey || evt.altKey) return;
     const touche = evt.key;
-    if (!presentateur && !pleinEcranTente && touche !== "Escape") pleinEcran();
+    if (!presentateur && !projecteur && !pleinEcranTente && touche !== "Escape") pleinEcran();
     if (/^[0-9]$/.test(touche)) {
       saisie += touche;
       return;
@@ -211,5 +214,6 @@
     }, 1000);
   }
 
+  if (presentateur) window.focus(); // reprendre le clavier après l'ouverture du projecteur
   afficher();
 })();

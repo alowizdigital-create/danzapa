@@ -19,7 +19,9 @@
 
   // Ouvre (ou réutilise) la fenêtre projecteur. Renvoie la fenêtre, ou null si
   // le navigateur a bloqué la popup.
-  async function ouvrirProjecteur(url) {
+  async function ouvrirProjecteur(adresse) {
+    const url = new URL(adresse, window.location.href);
+    url.searchParams.set("projecteur", "1");
     const ecran = await ecranDuProjecteur();
     let options = "popup";
     if (ecran) {
@@ -27,8 +29,9 @@
     } else {
       options += ",width=960,height=540";
     }
-    const fenetre = window.open(url, NOM_FENETRE, options);
-    if (fenetre) fenetre.focus();
+    const fenetre = window.open(url.href, NOM_FENETRE, options);
+    // Le clavier doit rester à la vue présentateur (au mieux : certains navigateurs l'ignorent).
+    window.focus();
     return fenetre;
   }
 

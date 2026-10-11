@@ -840,7 +840,7 @@ body.presentateur {
   margin: 0;
   height: 100vh;
   display: grid;
-  grid-template-rows: auto 1fr auto;
+  grid-template-rows: auto auto 1fr auto;
   background: #1f1f1f;
   color: #eee;
   font-family: system-ui, sans-serif;
@@ -949,3 +949,4 @@ body.presentateur {
 .outil-vitesse select { font: inherit; padding: 0.2rem 0.3rem; border: 1px solid var(--bordure); border-radius: 4px; }
 .scene { position: relative; }
 .diapo-apercu { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
+.presentateur-astuce { margin: 0; padding: 0.3rem 1.5rem 0; font-size: 0.8rem; color: #9a9a9a; }
