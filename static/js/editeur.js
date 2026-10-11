@@ -61,6 +61,8 @@
     g.dataset.taille = source.dataset.taille || "";
     g.dataset.taillePt = source.dataset.taillePt || "";
     g.dataset.police = source.dataset.police || "";
+    g.dataset.animation = source.dataset.animation || "";
+    g.dataset.vitesse = source.dataset.vitesse || "normale";
     g.dataset.fond = source.dataset.fond || "";
 
     const editable = edition && g.dataset.piece && g.dataset.chant === edition;
@@ -117,7 +119,7 @@
     const surPiece = !!(edition && vignette && vignette.dataset.piece && chant === edition);
     document.querySelectorAll("[data-cible]").forEach((b) => (b.disabled = !element || !!edition));
     document.querySelectorAll("[data-en-edition]").forEach((b) => {
-      const pourDiapo = b.matches("[data-format], [data-diapo-reglage], [data-ouvrir-couleurs], [data-taille-diapo], [data-police-diapo]")
+      const pourDiapo = b.matches("[data-format], [data-diapo-reglage], [data-ouvrir-couleurs], [data-animation-choix], [data-vitesse-animation], [data-animation-apercu], [data-animation-chant], [data-taille-diapo], [data-police-diapo]")
         || ["dupliquer", "haut", "bas", "supprimer"].includes(b.dataset.diapoAction);
       b.disabled = !edition || (pourDiapo && !surPiece);
     });
@@ -235,6 +237,11 @@
         v.dataset.taillePt = reglages.taille_pt;
         v.dataset.taille = reglages.taille_choisie || "";
       }
+      if (reglages.animation !== undefined) {
+        if (reglages.animation) v.dataset.animation = reglages.animation;
+        else delete v.dataset.animation;
+      }
+      if (reglages.vitesse_animation) v.dataset.vitesse = reglages.vitesse_animation;
       if (reglages.police !== undefined) {
         v.dataset.police = reglages.police;
         const pile = pileDe(reglages.police);
@@ -266,6 +273,8 @@
     corps.append("alignement", g.dataset.alignement || "centre");
     corps.append("taille", g.dataset.taille || "");
     corps.append("police", g.dataset.police || "");
+    corps.append("animation", g.dataset.animation || "");
+    corps.append("vitesse_animation", g.dataset.vitesse || "normale");
     corps.append("couleur_fond", g.dataset.fond || "");
     return { corps, chant: g.dataset.chant, piece: g.dataset.piece };
   }
@@ -320,6 +329,10 @@
       const n = parseInt(valeur, 10);
       if (Number.isNaN(n)) g.dataset.taille = ""; // automatique : le serveur renvoie la taille
       else fixerTaille(g, Math.min(200, Math.max(8, n)));
+    } else if (reglage === "animation") {
+      g.dataset.animation = valeur;
+    } else if (reglage === "vitesse") {
+      g.dataset.vitesse = valeur;
     } else if (reglage === "police") {
       g.dataset.police = valeur;
       const pile = pileDe(valeur);
@@ -343,6 +356,8 @@
       taille: g.style.getPropertyValue("--taille") || undefined,
       taille_pt: g.dataset.taillePt,
       taille_choisie: g.dataset.taille,
+      animation: g.dataset.animation || "",
+      vitesse_animation: g.dataset.vitesse || "normale",
     });
     afficherReglages();
     modifie = true;
@@ -376,6 +391,11 @@
     }
     const choixPolice = document.querySelector("[data-police-diapo]");
     if (choixPolice) choixPolice.value = avecTexte ? g.dataset.police || "" : "";
+    document.querySelectorAll("[data-animation-choix]").forEach((b) => {
+      b.classList.toggle("outil-actif", avecTexte && (g.dataset.animation || "") === b.dataset.animationChoix);
+    });
+    const vitesse = document.querySelector("[data-vitesse-animation]");
+    if (vitesse) vitesse.value = (avecTexte && g.dataset.vitesse) || "normale";
     document.querySelectorAll('[data-diapo-reglage="gauche"], [data-diapo-reglage="centre"], [data-diapo-reglage="droite"]').forEach((b) => {
       const actif = avecTexte && (g.dataset.alignement || "centre") === b.dataset.diapoReglage;
       b.classList.toggle("outil-actif", actif);
@@ -442,7 +462,7 @@
 
   // Les boutons de mise en forme ne doivent pas faire perdre la sélection du texte.
   document.addEventListener("mousedown", (evt) => {
-    if (evt.target.closest("[data-format], [data-diapo-reglage], [data-ouvrir-couleurs], .palette button")) evt.preventDefault();
+    if (evt.target.closest("[data-format], [data-diapo-reglage], [data-ouvrir-couleurs], .palette button, [data-animation-choix], [data-animation-apercu]")) evt.preventDefault();
   });
 
   document.addEventListener("input", (evt) => {
@@ -463,6 +483,63 @@
       else evt.target.blur();
     }
   });
+
+  // ------------------------------------------------------------ Animations
+
+  // Aperçu joué sur une copie posée par-dessus la grande diapo : la diapo en
+  // cours d'édition n'est jamais modifiée par l'animation.
+  let apercuEnCours = null;
+
+  function arreterApercu() {
+    if (!apercuEnCours) return;
+    clearTimeout(apercuEnCours.minuterie);
+    apercuEnCours.copie.remove();
+    apercuEnCours = null;
+  }
+
+  function apercuAnimation() {
+    arreterApercu();
+    const g = grande();
+    if (!g || !g.dataset.animation || !window.danzapaAnimations) return;
+    const copie = g.cloneNode(true);
+    copie.removeAttribute("id");
+    copie.classList.remove("diapo-editable");
+    copie.classList.add("diapo-apercu");
+    copie.querySelectorAll("[contenteditable]").forEach((z) => z.removeAttribute("contenteditable"));
+    g.parentElement.appendChild(copie);
+    const duree = window.danzapaAnimations.jouerAnimation(copie);
+    apercuEnCours = { copie, minuterie: setTimeout(arreterApercu, (duree + 0.6) * 1000) };
+  }
+
+  async function animationPourToutLeChant() {
+    const g = grande();
+    if (!edition || !g) return;
+    await sauverMaintenant();
+    htmx.ajax("POST", urlChant(edition, "animation/"), {
+      target: "#espace",
+      swap: "outerHTML",
+      values: { animation: g.dataset.animation || "", vitesse_animation: g.dataset.vitesse || "normale", piece: g.dataset.piece || "" },
+    });
+  }
+
+  document.addEventListener("click", (evt) => {
+    const choix = evt.target.closest("[data-animation-choix]");
+    if (choix) {
+      reglerDiapo("animation", choix.dataset.animationChoix);
+      return apercuAnimation();
+    }
+    if (evt.target.closest("[data-animation-apercu]")) return apercuAnimation();
+    if (evt.target.closest("[data-animation-chant]")) return animationPourToutLeChant();
+    if (apercuEnCours && !evt.target.closest("[data-vitesse-animation]")) arreterApercu();
+  });
+
+  document.addEventListener("change", (evt) => {
+    if (!evt.target.matches || !evt.target.matches("[data-vitesse-animation]")) return;
+    reglerDiapo("vitesse", evt.target.value);
+    apercuAnimation();
+  });
+
+  document.addEventListener("keydown", () => arreterApercu());
 
   // ------------------------------------------------------------ Couleurs (texte, fond)
 

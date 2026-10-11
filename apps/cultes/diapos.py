@@ -33,6 +33,8 @@ class Diapo:
     echelle: int = 100
     taille: int | None = None  # pt choisis ; None : automatique
     police: str = ""  # vide : police du thème
+    animation: str = ""  # entrée du texte (DiapoChant.ANIMATIONS)
+    vitesse_animation: str = "normale"
     couleur_fond: str = ""
     chant_id: str | None = None
     piece_id: str | None = None  # DiapoChant correspondante
@@ -64,6 +66,8 @@ def diapos_du_chant(element):
                 echelle=piece.echelle,
                 taille=piece.taille,
                 police=piece.police,
+                animation=piece.animation,
+                vitesse_animation=piece.vitesse_animation,
                 couleur_fond=piece.couleur_fond,
                 chant_id=str(chant.uuid),
                 piece_id=str(piece.uuid),

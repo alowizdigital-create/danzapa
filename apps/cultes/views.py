@@ -77,6 +77,8 @@ def contexte_espace(request, culte, selection=None, edition=None, piece=None):
         "tailles_pt": TAILLES_PT,
         "couleurs_texte": COULEURS_TEXTE,
         "couleurs_fond": COULEURS_FOND,
+        "animations": DiapoChant.ANIMATIONS,
+        "vitesses": DiapoChant.VITESSES,
         "themes": Theme.objects.all(),
         "groupes": groupes,
         "a_des_elements": any(g.element for g in groupes),
@@ -336,6 +338,10 @@ def enregistrer_diapo(request, pk, chant_pk, piece_pk):
         piece.police = donnees["police"]
     if "couleur_fond" in request.POST:
         piece.couleur_fond = donnees["couleur_fond"]
+    if "animation" in request.POST:
+        piece.animation = donnees["animation"]
+    if donnees.get("vitesse_animation"):
+        piece.vitesse_animation = donnees["vitesse_animation"]
     piece.save()
     chant.mettre_a_jour_recherche()
     culte.save(update_fields=["date_modification"])
@@ -355,6 +361,8 @@ def enregistrer_diapo(request, pk, chant_pk, piece_pk):
             "alignement": piece.alignement,
             "echelle": piece.echelle,
             "couleur_fond": piece.couleur_fond,
+            "animation": piece.animation,
+            "vitesse_animation": piece.vitesse_animation,
         }
     )
 
@@ -380,12 +388,14 @@ def ajouter_diapo(request, pk, chant_pk):
             modele.alignement, modele.echelle, modele.couleur_fond,
         )
         nouvelle.taille, nouvelle.police = modele.taille, modele.police
+        nouvelle.animation, nouvelle.vitesse_animation = modele.animation, modele.vitesse_animation
     elif apres:
         # Une nouvelle diapo garde la mise en page de la précédente.
         nouvelle.alignement, nouvelle.echelle, nouvelle.couleur_fond = (
             apres.alignement, apres.echelle, apres.couleur_fond,
         )
         nouvelle.taille, nouvelle.police = apres.taille, apres.police
+        nouvelle.animation, nouvelle.vitesse_animation = apres.animation, apres.vitesse_animation
     nouvelle.save()
     position = pieces.index(apres) + 1 if apres else len(pieces)
     pieces.insert(position, nouvelle)
@@ -420,6 +430,23 @@ def fond_du_chant(request, pk, chant_pk):
     chant.diapos.update(couleur_fond=form.cleaned_data["couleur_fond"])
     piece = uuid_valide(request.POST.get("piece"))
     return reponse_espace(request, culte, element.uuid, chant.uuid, piece)
+
+
+@peut_editer_chant
+@require_POST
+def animation_du_chant(request, pk, chant_pk):
+    """Même animation (et vitesse) pour toutes les diapos du chant."""
+    culte, element, chant = chant_du_culte(pk, chant_pk)
+    form = DiapoChantForm(
+        {"animation": request.POST.get("animation", ""), "vitesse_animation": request.POST.get("vitesse_animation", "")}
+    )
+    if not form.is_valid():
+        return HttpResponseBadRequest(premiere_erreur(form))
+    champs = {"animation": form.cleaned_data["animation"]}
+    if form.cleaned_data["vitesse_animation"]:
+        champs["vitesse_animation"] = form.cleaned_data["vitesse_animation"]
+    chant.diapos.update(**champs)
+    return reponse_espace(request, culte, element.uuid, chant.uuid, uuid_valide(request.POST.get("piece")))
 
 
 @peut_editer_chant

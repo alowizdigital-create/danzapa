@@ -184,6 +184,25 @@ class ExportTests(TestCase):
         police = [f for f in diapositive.shapes if f.has_text_frame][0].text_frame.paragraphs[0].runs[0].font
         self.assertEqual((police.name, police.size.pt), ("Georgia", 72))
 
+    def test_animations_exportees(self):
+        nsp = "{http://schemas.openxmlformats.org/presentationml/2006/main}"
+        premiere, seconde = list(self.chant.diapos.all())[:2]
+        premiere.animation, premiere.vitesse_animation = "lignes", "lente"
+        premiere.save()
+        seconde.animation = "zoom"
+        seconde.save()
+        diapositives = list(ouvrir(export.exporter(self.culte)).slides)
+        timing = diapositives[2]._element.find(nsp + "timing")
+        self.assertIsNotNone(timing)
+        effets = timing.findall(".//" + nsp + "cTn[@presetClass='entr']")
+        self.assertEqual(len(effets), 3)  # une ligne = un paragraphe animé
+        self.assertEqual({e.get("presetID") for e in effets}, {"10"})
+        self.assertEqual(timing.find(".//" + nsp + "animEffect").find(".//" + nsp + "cTn").get("dur"), "1500")
+        self.assertEqual(timing.find(".//" + nsp + "bldP").get("build"), "p")
+        zoom = diapositives[3]._element.find(nsp + "timing")
+        self.assertEqual(zoom.find(".//" + nsp + "cTn[@presetClass='entr']").get("presetID"), "53")
+        self.assertIsNone(diapositives[1]._element.find(nsp + "timing"))  # titre : pas d'animation
+
     def test_pas_gras_explicite_exporte(self):
         piece = self.chant.diapos.first()
         piece.contenu = '1. Sans <span style="font-weight: normal">attendre</span>'

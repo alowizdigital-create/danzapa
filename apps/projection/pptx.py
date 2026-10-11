@@ -15,7 +15,7 @@ from pptx.util import Emu, Pt
 from apps.chants import mise_en_forme
 from apps.cultes import diapos as d
 
-from . import rendu
+from . import animations_pptx, rendu
 from .models import Theme
 
 EMU_PAR_PT = 12700
@@ -76,7 +76,11 @@ class Exporteur:
         elif diapo.type == d.TITRE:
             self.texte(diapositive, diapo, police=self.theme.police_titres, gras=self.theme.gras)
         else:
-            self.texte(diapositive, diapo, police=diapo.police or self.theme.police, gras=self.theme.gras)
+            zone = self.texte(diapositive, diapo, police=diapo.police or self.theme.police, gras=self.theme.gras)
+            if diapo.animation:
+                animations_pptx.animer(
+                    diapositive, zone, diapo.animation, diapo.vitesse_animation, len(zone.text_frame.paragraphs)
+                )
 
         if diapo.masque:
             # Diapo masquée de PowerPoint : dans le fichier, pas en projection.
@@ -148,6 +152,7 @@ class Exporteur:
                 fonte.italic = italique or style.italique
                 fonte.underline = style.souligne
                 fonte.color.rgb = rgb(style.couleur or self.theme.couleur_texte)
+        return zone
 
 
 def exporter(culte):

@@ -364,6 +364,33 @@ class SaisieDesChantsTests(TestCase):
         piece.save()
         self.assertEqual((piece.police, piece.taille), ("", 8))
 
+    def test_animation_de_la_diapo(self):
+        piece = self.pieces[0]
+        url = self.url("enregistrer_diapo", piece.uuid)
+        donnees = json.loads(self.client.post(url, {"animation": "lignes", "vitesse_animation": "lente"}).content)
+        self.assertEqual((donnees["animation"], donnees["vitesse_animation"]), ("lignes", "lente"))
+        piece.refresh_from_db()
+        self.assertEqual((piece.animation, piece.vitesse_animation), ("lignes", "lente"))
+        editeur = self.client.get(reverse("cultes:editeur", args=[self.culte.uuid]))
+        self.assertContains(editeur, 'data-animation="lignes" data-vitesse="lente"')
+        self.assertContains(editeur, 'data-onglet="animations"')
+        self.assertContains(self.client.get(reverse("cultes:projection", args=[self.culte.uuid])), 'data-animation="lignes"')
+        self.assertEqual(self.client.post(url, {"animation": "tourbillon"}).status_code, 400)
+        # Une diapo dupliquée garde son animation ; « Aucune » l'enlève.
+        self.hx_post(self.url("ajouter_diapo"), {"dupliquer": piece.uuid})
+        self.assertEqual(self.chant.diapos.filter(animation="lignes").count(), 2)
+        self.client.post(url, {"animation": ""})
+        piece.refresh_from_db()
+        self.assertEqual(piece.animation, "")
+
+    def test_animation_pour_tout_le_chant(self):
+        url = reverse("cultes:animation_chant", args=[self.culte.uuid, self.chant.uuid])
+        self.hx_post(url, {"animation": "zoom", "vitesse_animation": "rapide"})
+        self.assertEqual(set(self.chant.diapos.values_list("animation", "vitesse_animation")), {("zoom", "rapide")})
+        self.assertEqual(self.hx_post(url, {"animation": "x"}).status_code, 400)
+        self.client.force_login(self.lecteur)
+        self.assertEqual(self.hx_post(url, {"animation": ""}).status_code, 403)
+
     def test_fond_pour_tout_le_chant(self):
         url = reverse("cultes:fond_chant", args=[self.culte.uuid, self.chant.uuid])
         reponse = self.hx_post(url, {"couleur_fond": "#0b1f4d", "piece": self.pieces[1].uuid})

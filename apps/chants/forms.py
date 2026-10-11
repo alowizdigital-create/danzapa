@@ -1,6 +1,6 @@
 from django import forms
 
-from .models import Chant
+from .models import Chant, DiapoChant
 
 AIDE_COLLER = (
     "Optionnel : collez des paroles existantes pour créer les diapos d'un coup "
@@ -46,4 +46,6 @@ class DiapoChantForm(forms.Form):
     echelle = forms.IntegerField(required=False, min_value=50, max_value=200)
     taille = forms.IntegerField(required=False, min_value=8, max_value=200)
     police = forms.CharField(required=False, max_length=40)
+    animation = forms.ChoiceField(choices=DiapoChant.ANIMATIONS, required=False)
+    vitesse_animation = forms.ChoiceField(choices=DiapoChant.VITESSES, required=False)
     couleur_fond = forms.RegexField(regex=r"^(#[0-9a-fA-F]{6})?$", required=False)

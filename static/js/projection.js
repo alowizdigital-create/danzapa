@@ -13,9 +13,16 @@
   let ecran = ""; // "", "noir" ou "blanc"
   let saisie = ""; // numéro tapé au clavier
 
+  let indexAnime = null; // l'animation ne se joue qu'à l'arrivée sur une diapo
+
   function afficher() {
     if (presentateur) afficherPresentateur();
     else afficherProjection();
+    if (index !== indexAnime) {
+      indexAnime = index;
+      const cible = presentateur ? document.querySelector("[data-actuelle] .diapo") : diapos[index] && diapos[index].querySelector(".diapo");
+      if (cible && window.danzapaAnimations) window.danzapaAnimations.jouerAnimation(cible);
+    }
   }
 
   function afficherProjection() {
@@ -36,7 +43,9 @@
   }
 
   function afficherPresentateur() {
-    copier(document.querySelector("[data-actuelle]"), diapos[index]);
+    const actuelle = document.querySelector("[data-actuelle]");
+    // Ne pas recopier la diapo actuelle (et couper son animation) pour un simple écran noir.
+    if (index !== indexAnime || !actuelle.firstChild) copier(actuelle, diapos[index]);
     copier(document.querySelector("[data-suivante]"), diapos[index + 1]);
     diapos.forEach((d, i) => d.classList.toggle("active", i === index));
     if (diapos[index]) diapos[index].scrollIntoView({ block: "nearest", inline: "nearest" });

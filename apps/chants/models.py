@@ -84,6 +84,16 @@ class DiapoChant(models.Model):
     ALIGNEMENTS = [(GAUCHE, "Gauche"), (CENTRE, "Centré"), (DROITE, "Droite")]
     ECHELLE_MIN, ECHELLE_MAX = 50, 200
     TAILLE_MIN, TAILLE_MAX = 8, 200
+    # Animations d'entrée du texte (projection, aperçu de l'éditeur, export .pptx).
+    ANIMATIONS = [
+        ("", "Aucune"),
+        ("fondu", "Fondu"),
+        ("monter", "Glisser vers le haut"),
+        ("zoom", "Zoom"),
+        ("lignes", "Ligne par ligne"),
+        ("machine", "Machine à écrire"),
+    ]
+    VITESSES = [("rapide", "Rapide"), ("normale", "Normale"), ("lente", "Lente")]
 
     chant = models.ForeignKey(Chant, on_delete=models.CASCADE, related_name="diapos")
     ordre = models.PositiveIntegerField()
@@ -101,6 +111,8 @@ class DiapoChant(models.Model):
     )
     # Vide : police du thème. Noms de apps/projection/models.py (POLICES).
     police = models.CharField(max_length=40, blank=True)
+    animation = models.CharField(max_length=12, choices=ANIMATIONS, blank=True)
+    vitesse_animation = models.CharField(max_length=8, choices=VITESSES, default="normale")
     couleur_fond = models.CharField(
         "couleur de fond", max_length=7, blank=True, validators=[couleur_hex], help_text="Vide : couleur du thème."
     )
@@ -128,4 +140,8 @@ class DiapoChant(models.Model):
 
         if self.police not in POLICES:
             self.police = ""
+        if self.animation not in dict(self.ANIMATIONS):
+            self.animation = ""
+        if self.vitesse_animation not in dict(self.VITESSES):
+            self.vitesse_animation = "normale"
         super().save(*args, **kwargs)

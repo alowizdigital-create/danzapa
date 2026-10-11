@@ -21,6 +21,7 @@ urlpatterns = [
     path("<uuid:pk>/chants/<uuid:chant_pk>/supprimer/", views.supprimer_chant_bibliotheque, name="supprimer_chant"),
     path("<uuid:pk>/chants/<uuid:chant_pk>/diapos/ajouter/", views.ajouter_diapo, name="ajouter_diapo"),
     path("<uuid:pk>/chants/<uuid:chant_pk>/fond/", views.fond_du_chant, name="fond_chant"),
+    path("<uuid:pk>/chants/<uuid:chant_pk>/animation/", views.animation_du_chant, name="animation_chant"),
     path("<uuid:pk>/chants/<uuid:chant_pk>/diapos/reordonner/", views.reordonner_diapos, name="reordonner_diapos"),
     path("<uuid:pk>/chants/<uuid:chant_pk>/diapos/<uuid:piece_pk>/", views.enregistrer_diapo, name="enregistrer_diapo"),
     path(

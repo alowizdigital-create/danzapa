@@ -907,3 +907,45 @@ body.presentateur {
 .etat-projecteur { margin-left: auto; font-size: 0.85rem; color: #f0b429; }
 .etat-projecteur.connecte { color: #6ccb5f; }
 .presentateur-barre .etat-projecteur + .bouton-principal { margin-left: 0; }
+
+/* ================================================================
+   Animations d'entrée du texte (static/js/animations.js pose .joue)
+   ================================================================ */
+.diapo { --duree-animation: 0.8s; }
+.diapo[data-vitesse="rapide"] { --duree-animation: 0.4s; }
+.diapo[data-vitesse="lente"] { --duree-animation: 1.5s; }
+.diapo.joue[data-animation="fondu"] .diapo-contenu { animation: anim-fondu var(--duree-animation) ease-out both; }
+.diapo.joue[data-animation="monter"] .diapo-contenu { animation: anim-monter var(--duree-animation) cubic-bezier(0.2, 0.7, 0.3, 1) both; }
+.diapo.joue[data-animation="zoom"] .diapo-contenu { animation: anim-zoom var(--duree-animation) cubic-bezier(0.2, 0.7, 0.3, 1) both; }
+.diapo.joue[data-animation="lignes"] .diapo-contenu > * {
+  animation: anim-monter var(--duree-animation) ease-out both;
+  animation-delay: calc(var(--rang, 0) * var(--duree-animation) * 0.5);
+}
+.diapo.joue[data-animation="machine"] .lettre { opacity: 0; animation: anim-fondu 0.05s linear both; animation-delay: var(--delai, 0s); }
+@keyframes anim-fondu { from { opacity: 0; } to { opacity: 1; } }
+@keyframes anim-monter { from { opacity: 0; transform: translateY(12%); } to { opacity: 1; transform: none; } }
+@keyframes anim-zoom { from { opacity: 0; transform: scale(0.8); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .diapo.joue .diapo-contenu, .diapo.joue .diapo-contenu > *, .diapo.joue .lettre { animation: none !important; opacity: 1 !important; }
+}
+
+/* Vignette d'une diapo animée : petit badge ✦ (comme le volet Animation de PowerPoint). */
+.vignette .diapo[data-animation]::after {
+  content: "✦";
+  position: absolute;
+  right: 4%;
+  bottom: 4%;
+  font-size: 0.75rem;
+  line-height: 1;
+  color: #ffd700;
+  text-shadow: 0 0 2px #000;
+}
+
+/* Onglet Animations */
+.groupe-animations { gap: 0.1rem; }
+.outil-animation { min-width: 4.6rem; }
+.apercu-anim { font-size: 1.1rem; }
+.outil-vitesse { display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.8rem; }
+.outil-vitesse select { font: inherit; padding: 0.2rem 0.3rem; border: 1px solid var(--bordure); border-radius: 4px; }
+.scene { position: relative; }
+.diapo-apercu { position: absolute; inset: 0; z-index: 2; pointer-events: none; }

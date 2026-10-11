@@ -84,6 +84,10 @@ danzapa/
 5. ✅ **Mode projection** : plein écran, clavier, vue présentateur.
 6. **Module Bible** : import d'une version libre de droits, recherche, projection de versets.
 
+## Animations de texte
+
+Onglet **Animations** de l'éditeur, en mode « Modifier le chant » : chaque diapo peut faire apparaître son texte en **Fondu**, **Glisser vers le haut**, **Zoom**, **Ligne par ligne** ou **Machine à écrire**, à la vitesse Rapide, Normale ou Lente. **Aperçu** rejoue l'effet, **À tout le chant** l'applique à toutes les diapos du chant. Une ✦ marque les vignettes animées. L'effet se joue à l'arrivée de la diapo en projection, et il est repris dans l'export PowerPoint (« Machine à écrire » y devient un fondu).
+
 ## Projeter un culte
 
 Dans l'éditeur, **▶ Projeter** (ou **F5**) lance le diaporama depuis le début, **Maj+F5** depuis la diapo sélectionnée. Comme PowerPoint avec deux écrans :

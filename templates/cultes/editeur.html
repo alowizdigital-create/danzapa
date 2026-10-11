@@ -8,6 +8,7 @@
 <script src="{% static 'vendor/htmx.min.js' %}" defer></script>
 <script src="{% static 'vendor/Sortable.min.js' %}" defer></script>
 <script src="{% static 'js/ecrans.js' %}" defer></script>
+<script src="{% static 'js/animations.js' %}" defer></script>
 <script src="{% static 'js/editeur.js' %}" defer></script>
 {% endblock %}
 
@@ -42,6 +43,7 @@
       <button type="button" role="tab" data-onglet="accueil" class="actif">Accueil</button>
       <button type="button" role="tab" data-onglet="insertion">Insertion</button>
       <button type="button" role="tab" data-onglet="creation">Création</button>
+      {% if perms.chants.change_chant %}<button type="button" role="tab" data-onglet="animations">Animations</button>{% endif %}
     {% endif %}
     <button type="button" role="tab" data-onglet="diaporama">Diaporama</button>
     <button type="button" role="tab" data-onglet="affichage"{% if not peut_modifier %} class="actif"{% endif %}>Affichage</button>
@@ -180,6 +182,38 @@
       <span class="ruban-libelle">Thèmes</span>
     </form>
   </div>
+
+  {% if perms.chants.change_chant %}
+  {# Animations d'entrée du texte de la diapo (static/js/animations.js). #}
+  <div class="ruban-panneau" data-panneau="animations" hidden>
+    <div class="ruban-groupe">
+      <button type="button" class="outil cache-en-edition" data-chant-action="editer" data-hors-edition><span class="outil-icone">✎</span>Modifier le chant</button>
+      <button type="button" class="outil cache-hors-edition" data-chant-action="fermer" data-en-edition><span class="outil-icone">✓</span>Fermer le chant</button>
+      <span class="ruban-libelle">Chant</span>
+    </div>
+    <div class="ruban-groupe groupe-animations">
+      {% for valeur, libelle in animations %}
+        <button type="button" class="outil outil-animation" data-animation-choix="{{ valeur }}" data-en-edition title="{{ libelle }}">
+          <span class="outil-icone apercu-anim apercu-{{ valeur|default:'aucune' }}">{% if valeur %}★{% else %}∅{% endif %}</span>{{ libelle }}
+        </button>
+      {% endfor %}
+      <span class="ruban-libelle">Animation du texte</span>
+    </div>
+    <div class="ruban-groupe">
+      <label class="outil outil-vitesse">Vitesse
+        <select data-vitesse-animation data-en-edition>
+          {% for valeur, libelle in vitesses %}<option value="{{ valeur }}">{{ libelle }}</option>{% endfor %}
+        </select>
+      </label>
+      <span class="ruban-libelle">Minutage</span>
+    </div>
+    <div class="ruban-groupe">
+      <button type="button" class="outil" data-animation-apercu data-en-edition><span class="outil-icone">▶</span>Aperçu</button>
+      <button type="button" class="outil" data-animation-chant data-en-edition title="Même animation et vitesse pour toutes les diapos du chant"><span class="outil-icone">⇉</span>À tout le chant</button>
+      <span class="ruban-libelle">Appliquer</span>
+    </div>
+  </div>
+  {% endif %}
   {% endif %}
 
   <div class="ruban-panneau" data-panneau="diaporama" hidden>
