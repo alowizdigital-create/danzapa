@@ -107,7 +107,9 @@ Avec un seul écran : onglet **Diaporama → Sur cet écran seulement**. Les él
 | F | Plein écran |
 | Échap | Quitter le plein écran, puis revenir à l'éditeur |
 
-**⇩ PowerPoint** (à côté de Projeter, ou dans la liste des cultes) télécharge le culte en `.pptx`.
+**⇩ PDF** et **⇩ PPTX** (à côté de Projeter, ou dans la liste des cultes) téléchargent le culte en PDF (une diapo par page, comme en projection) ou en PowerPoint `.pptx`.
+
+**Insertion → Image** ajoute une diapo image (affiche, photo, verset illustré) : l'image est affichée en entier, avec une légende facultative ; elle se déplace, se masque et se retire comme un chant. Pour la changer : fenêtre **Propriétés** de l'élément.
 
 ## Mise en ligne
 

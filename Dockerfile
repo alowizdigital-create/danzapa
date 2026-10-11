@@ -13,6 +13,12 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
+# Polices libres de même gabarit que Calibri, Arial, Times… pour l'export PDF
+# (apps/projection/pdf.py) ; sans elles, le PDF utilise Helvetica / Times.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends fonts-crosextra-carlito fonts-liberation2 fonts-dejavu-core \
+    && rm -rf /var/lib/apt/lists/*
+
 COPY requirements.txt .
 RUN pip install -r requirements.txt
 

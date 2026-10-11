@@ -40,6 +40,19 @@ def lire_image(champ):
         return fichier.read()
 
 
+def lire_image_de_diapo(diapo):
+    """(contenu, largeur px, hauteur px) de l'image d'une diapo image, ou None si le fichier manque."""
+    from django.core.files.storage import default_storage
+    from PIL import Image
+
+    if not diapo.image_nom or not default_storage.exists(diapo.image_nom):
+        return None
+    with default_storage.open(diapo.image_nom, "rb") as fichier:
+        contenu = fichier.read()
+    with Image.open(io.BytesIO(contenu)) as image:
+        return contenu, image.width, image.height
+
+
 class Exporteur:
     def __init__(self, culte):
         self.culte = culte
@@ -75,6 +88,8 @@ class Exporteur:
             self.texte(diapositive, diapo, italique=True, police=self.theme.police_titres, gras=True)
         elif diapo.type == d.TITRE:
             self.texte(diapositive, diapo, police=self.theme.police_titres, gras=self.theme.gras)
+        elif diapo.type == d.IMAGE:
+            self.image(diapositive, diapo)
         else:
             zone = self.texte(diapositive, diapo, police=diapo.police or self.theme.police, gras=self.theme.gras)
             if diapo.animation:
@@ -98,6 +113,17 @@ class Exporteur:
 
     def image_pleine_page(self, diapositive, contenu):
         diapositive.shapes.add_picture(io.BytesIO(contenu), 0, 0, LARGEUR, HAUTEUR)
+
+    def image(self, diapositive, diapo):
+        """Diapo image : l'image entière, centrée ; la légende en bas."""
+        lue = lire_image_de_diapo(diapo)
+        if lue:
+            contenu, largeur, hauteur = lue
+            gauche, haut, l, h = rendu.contenir(largeur, hauteur, rendu.zone_image(diapo))
+            diapositive.shapes.add_picture(io.BytesIO(contenu), pt(gauche), pt(haut), pt(l), pt(h))
+        if diapo.lignes:
+            zone = self.texte(diapositive, diapo, police=self.theme.police_titres, gras=self.theme.gras)
+            zone.top = pt(rendu.HAUTEUR_PT - rendu.HAUTEUR_LEGENDE_PT)
 
     def bandeau(self, diapositive):
         """Bandeau gris encadré de deux filets, comme la diapo de bienvenue actuelle."""

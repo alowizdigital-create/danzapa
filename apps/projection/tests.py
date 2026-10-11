@@ -203,6 +203,49 @@ class ExportTests(TestCase):
         self.assertEqual(zoom.find(".//" + nsp + "cTn[@presetClass='entr']").get("presetID"), "53")
         self.assertIsNone(diapositives[1]._element.find(nsp + "timing"))  # titre : pas d'animation
 
+    def test_pdf_une_page_par_diapo_visible(self):
+        import re
+        import zlib
+
+        from . import pdf
+
+        contenu = pdf.exporter(self.culte)
+        self.assertTrue(contenu.startswith(b"%PDF"))
+        visibles = [x for x in d.diapos_du_culte(self.culte) if not x.masque]
+        self.assertEqual(len(re.findall(rb"/Type /Page[^s]", contenu)), len(visibles))
+
+    def test_pdf_polices_de_repli(self):
+        from . import pdf
+
+        pdf.fichiers_de_polices.cache_clear()
+        pdf.famille.cache_clear()
+        with self.settings():
+            from unittest import mock
+
+            with mock.patch.object(pdf, "DOSSIERS_POLICES", []):
+                pdf.fichiers_de_polices.cache_clear()
+                pdf.famille.cache_clear()
+                self.assertEqual(pdf.famille("Calibri"), "Helvetica")
+                self.assertEqual(pdf.famille("Georgia"), "Times-Roman")
+                contenu = pdf.exporter(self.culte)
+                # Polices standard : le texte se lit dans les flux des pages (ASCII85 + Flate).
+                import base64
+                import re
+                import zlib
+
+                pages = b""
+                for flux in re.findall(rb"stream\r?\n(.*?)\r?\n?endstream", contenu, re.S):
+                    for decoder in (zlib.decompress, lambda f: zlib.decompress(base64.a85decode(f.strip(), adobe=True))):
+                        try:
+                            pages += decoder(flux)
+                            break
+                        except (ValueError, zlib.error):
+                            pass  # autre encodage (images…)
+                self.assertIn(b"attendre", pages)
+                self.assertIn(b"BIENVENUS", pages)
+        pdf.fichiers_de_polices.cache_clear()
+        pdf.famille.cache_clear()
+
     def test_pas_gras_explicite_exporte(self):
         piece = self.chant.diapos.first()
         piece.contenu = '1. Sans <span style="font-weight: normal">attendre</span>'

@@ -55,7 +55,7 @@
       <form hx-post="{% url 'cultes:infos_chant' culte.uuid element.chant.uuid %}" hx-target="#espace" hx-swap="outerHTML" data-ferme-apres>
       <input type="hidden" name="hors_edition" value="1">
     {% else %}
-      <form hx-post="{% url 'cultes:modifier_element' culte.uuid element.uuid %}" hx-target="#espace" hx-swap="outerHTML" data-ferme-apres>
+      <form hx-post="{% url 'cultes:modifier_element' culte.uuid element.uuid %}" hx-target="#espace" hx-swap="outerHTML" data-ferme-apres{% if element.type == "image" %} hx-encoding="multipart/form-data"{% endif %}>
     {% endif %}
       <div class="dialogue-entete">
         <h2>{{ element.nom }} <small>{{ element.get_type_display }}{% if element.masque %} · masqué{% endif %}</small></h2>
@@ -71,6 +71,11 @@
           <label>Auteur <input name="auteur" value="{{ element.chant.auteur }}" maxlength="200"></label>
           {% with nb=element.chant.utilisations.count %}{% if nb > 1 %}<p class="aide">Ce chant est utilisé dans {{ nb }} cultes : une modification s'applique partout.</p>{% endif %}{% endwith %}
         {% endif %}
+      {% elif element.type == "image" %}
+        <label>Légende <small>(facultative, sous l'image)</small> <input name="titre" value="{{ element.titre }}" maxlength="200"></label>
+        <label>Remplacer l'image <small>(facultatif : JPEG, PNG ou WebP, 5 Mo au plus)</small>
+          <input type="file" name="image" accept="image/jpeg,image/png,image/webp,image/gif">
+        </label>
       {% else %}
         <label>Titre <input name="titre" value="{{ element.titre }}" maxlength="200"></label>
         <label>Texte

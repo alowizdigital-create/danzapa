@@ -17,6 +17,7 @@ BIENVENUE = "bienvenue"
 TITRE = "titre"
 PAROLES = "paroles"
 TEXTE = "texte"
+IMAGE = "image"
 
 
 @dataclass
@@ -33,6 +34,8 @@ class Diapo:
     echelle: int = 100
     taille: int | None = None  # pt choisis ; None : automatique
     police: str = ""  # vide : police du thème
+    image_url: str = ""  # diapo image
+    image_nom: str = ""  # fichier dans MEDIA_ROOT (exports)
     animation: str = ""  # entrée du texte (DiapoChant.ANIMATIONS)
     vitesse_animation: str = "normale"
     couleur_fond: str = ""
@@ -88,6 +91,26 @@ def diapos_du_texte(element):
     return diapos
 
 
+def diapos_de_l_image(element):
+    """Diapo titre « Moment : Titre » si un moment est donné, puis l'image (titre en légende)."""
+    diapos = []
+    if element.moment:
+        entete = " : ".join(p for p in (element.moment, element.titre) if p)
+        diapos.append(Diapo(TITRE, [entete], str(element.uuid), element.masque, "Titre"))
+    diapos.append(
+        Diapo(
+            IMAGE,
+            [element.titre] if element.titre else [],
+            str(element.uuid),
+            element.masque,
+            "Image",
+            image_url=element.image.url if element.image else "",
+            image_nom=element.image.name if element.image else "",
+        )
+    )
+    return diapos
+
+
 def groupes_du_culte(culte, elements=None):
     """Diapos regroupées par élément ; le premier groupe (bienvenue) n'a pas d'élément."""
     if elements is None:
@@ -99,6 +122,8 @@ def groupes_du_culte(culte, elements=None):
     for element in elements:
         if element.type == element.CHANT and element.chant:
             diapos = diapos_du_chant(element)
+        elif element.type == element.IMAGE:
+            diapos = diapos_de_l_image(element)
         else:
             diapos = diapos_du_texte(element)
         groupes.append(Groupe(element, diapos))

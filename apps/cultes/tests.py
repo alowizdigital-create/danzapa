@@ -491,3 +491,114 @@ class SaisieDesChantsTests(TestCase):
                         'data-palette="texte"', 'data-fond-chant', 'data-diapo-action="ajouter"', 'id="dlg-nouveau-chant"'):
             self.assertContains(reponse, attendu)
         self.assertContains(reponse, f'data-piece="{self.pieces[0].uuid}"')
+
+
+class DiapoImageTests(TestCase):
+    def setUp(self):
+        import shutil
+        import tempfile
+
+        from django.test import override_settings
+
+        dossier = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, dossier, ignore_errors=True)
+        reglage = override_settings(MEDIA_ROOT=dossier)
+        reglage.enable()
+        self.addCleanup(reglage.disable)
+        self.editeur = utilisateur("editeur", roles.EDITEUR)
+        self.lecteur = utilisateur("lecteur", roles.LECTEUR)
+        self.culte = Culte.objects.create(date=date(2026, 9, 20))
+        self.client.force_login(self.editeur)
+
+    def png(self, nom="affiche.png", taille=(64, 36)):
+        import io
+
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        from PIL import Image
+
+        tampon = io.BytesIO()
+        Image.new("RGB", taille, (20, 120, 200)).save(tampon, "PNG")
+        return SimpleUploadedFile(nom, tampon.getvalue(), content_type="image/png")
+
+    def url(self, nom, *args):
+        return reverse(f"cultes:{nom}", args=[self.culte.uuid, *args])
+
+    def ajouter(self, **donnees):
+        return self.client.post(self.url("ajouter_image"), {"image": self.png(), **donnees}, headers={"HX-Request": "true"})
+
+    def test_ajout_affichage_et_projection(self):
+        reponse = self.ajouter(moment="Annonces", titre="Repas fraternel")
+        self.assertEqual(reponse.status_code, 200)
+        element = self.culte.elements.get()
+        self.assertEqual((element.type, element.nom), (ElementCulte.IMAGE, "Repas fraternel"))
+        self.assertContains(reponse, f'src="{element.image.url}"')
+        self.assertContains(reponse, "Annonces : Repas fraternel")
+        types = [d.type for d in diapos.diapos_du_culte(self.culte)]
+        self.assertEqual(types, [diapos.BIENVENUE, diapos.TITRE, diapos.IMAGE])
+        self.assertContains(self.client.get(self.url("projection")), f'src="{element.image.url}"')
+
+    def test_image_obligatoire_et_valide(self):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+
+        sans = self.client.post(self.url("ajouter_image"), {"titre": "x"}, headers={"HX-Request": "true"})
+        self.assertEqual(sans.status_code, 400)
+        faux = SimpleUploadedFile("faux.png", b"pas une image", content_type="image/png")
+        reponse = self.client.post(self.url("ajouter_image"), {"image": faux}, headers={"HX-Request": "true"})
+        self.assertEqual(reponse.status_code, 400)
+        self.assertFalse(self.culte.elements.exists())
+
+    def test_remplacer_masquer_retirer(self):
+        from django.core.files.storage import default_storage
+
+        self.ajouter(titre="Affiche")
+        element = self.culte.elements.get()
+        premier = element.image.name
+        self.client.post(
+            self.url("modifier_element", element.uuid), {"moment": "", "titre": "Affiche 2", "image": self.png("autre.png")},
+            headers={"HX-Request": "true"},
+        )
+        element.refresh_from_db()
+        self.assertEqual(element.titre, "Affiche 2")
+        self.assertNotEqual(element.image.name, premier)
+        self.assertFalse(default_storage.exists(premier))  # l'ancienne image est effacée
+        # Sans nouveau fichier, l'image reste.
+        self.client.post(self.url("modifier_element", element.uuid), {"titre": "Affiche 3"}, headers={"HX-Request": "true"})
+        element.refresh_from_db()
+        self.assertTrue(element.image and element.titre == "Affiche 3")
+        self.client.post(self.url("basculer_masque", element.uuid), headers={"HX-Request": "true"})
+        element.refresh_from_db()
+        self.assertTrue(element.masque)
+        nom = element.image.name
+        self.client.post(self.url("supprimer_element", element.uuid), headers={"HX-Request": "true"})
+        self.assertFalse(default_storage.exists(nom))
+
+    def test_image_gardee_par_un_culte_duplique(self):
+        from django.core.files.storage import default_storage
+
+        self.ajouter()
+        copie = self.culte.dupliquer(date(2026, 9, 27))
+        nom = copie.elements.get().image.name
+        self.culte.elements.get().delete()
+        self.assertTrue(default_storage.exists(nom))
+
+    def test_lecteur_ne_peut_pas_inserer(self):
+        self.client.force_login(self.lecteur)
+        self.assertEqual(self.ajouter().status_code, 403)
+
+    def test_exports_avec_image(self):
+        import re
+
+        self.ajouter(titre="Légende")
+        pdf = self.client.get(self.url("export_pdf"))
+        self.assertEqual(pdf["Content-Type"], "application/pdf")
+        self.assertIn('filename="Culte du 20 septembre 2026.pdf"', pdf["Content-Disposition"])
+        self.assertEqual(len(re.findall(rb"/Type /Page[^s]", pdf.content)), 2)  # bienvenue + image
+        self.assertIn(b"/Subtype /Image", pdf.content)
+        from io import BytesIO
+
+        from pptx import Presentation
+
+        presentation = Presentation(BytesIO(self.client.get(self.url("export_pptx")).content))
+        diapo = list(presentation.slides)[1]
+        self.assertEqual(sum(1 for f in diapo.shapes if f.shape_type == 13), 1)  # l'image
+        self.assertIn("Légende", [p.text for f in diapo.shapes if f.has_text_frame for p in f.text_frame.paragraphs])

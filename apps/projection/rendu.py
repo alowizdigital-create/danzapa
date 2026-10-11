@@ -30,8 +30,34 @@ LARGEUR_BANDEAU_PT = LARGEUR_PT * 0.84
 HAUTEUR_BANDEAU_PT = HAUTEUR_PT * 0.44
 
 
+# Diapo image : l'image occupe le haut, la légende (titre) une bande en bas.
+HAUTEUR_LEGENDE_PT = HAUTEUR_PT * 0.12
+MARGE_IMAGE_PT = HAUTEUR_PT * 0.03
+
+
+def zone_image(diapo):
+    """(gauche, haut, largeur, hauteur) en pt, depuis le coin haut gauche : cadre de l'image."""
+    bas = HAUTEUR_LEGENDE_PT if diapo.lignes else 0
+    return (
+        MARGE_IMAGE_PT,
+        MARGE_IMAGE_PT,
+        LARGEUR_PT - 2 * MARGE_IMAGE_PT,
+        HAUTEUR_PT - 2 * MARGE_IMAGE_PT - bas,
+    )
+
+
+def contenir(largeur_image, hauteur_image, cadre):
+    """Image agrandie ou réduite pour tenir dans le cadre, centrée (object-fit: contain)."""
+    gauche, haut, largeur, hauteur = cadre
+    echelle = min(largeur / largeur_image, hauteur / hauteur_image)
+    l, h = largeur_image * echelle, hauteur_image * echelle
+    return gauche + (largeur - l) / 2, haut + (hauteur - h) / 2, l, h
+
+
 def zone_texte(diapo):
     """Largeur et hauteur (pt) disponibles pour le texte de la diapo."""
+    if diapo.type == d.IMAGE:
+        return LARGEUR_UTILE_PT, HAUTEUR_LEGENDE_PT
     if diapo.type == d.BIENVENUE:
         return LARGEUR_BANDEAU_PT * 0.94, HAUTEUR_BANDEAU_PT * 0.94
     return LARGEUR_UTILE_PT, HAUTEUR_UTILE_PT
@@ -42,6 +68,8 @@ def taille_nominale(diapo, theme):
         return theme.taille_bienvenue
     if diapo.type == d.TITRE:
         return theme.taille_titre
+    if diapo.type == d.IMAGE:
+        return round(theme.taille_titre * 0.8)  # légende
     return theme.taille_paroles
 
 

@@ -3,10 +3,13 @@ import uuid
 from django.conf import settings
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models, transaction
+from django.db.models.signals import post_delete
+from django.dispatch import receiver
 from django.urls import reverse
 from django.utils import formats
 
 from apps.chants.models import Chant
+from apps.projection.models import image_legere
 
 MOMENT_PAR_DEFAUT = "Cantique d'entrée"
 # Sur trois lignes, comme dans la présentation PowerPoint actuelle.
@@ -119,6 +122,7 @@ class Culte(models.Model):
                 masque=e.masque,
                 titre=e.titre,
                 contenu=e.contenu,
+                image=e.image.name,
             )
             for e in self.elements.all()
         )
@@ -131,7 +135,8 @@ class ElementCulte(models.Model):
 
     CHANT = "chant"
     TEXTE = "texte"
-    TYPES = [(CHANT, "Chant"), (TEXTE, "Texte libre")]
+    IMAGE = "image"
+    TYPES = [(CHANT, "Chant"), (TEXTE, "Texte libre"), (IMAGE, "Image")]
 
     culte = models.ForeignKey(Culte, on_delete=models.CASCADE, related_name="elements")
     ordre = models.PositiveIntegerField()
@@ -145,6 +150,8 @@ class ElementCulte(models.Model):
     masque = models.BooleanField("masqué", default=False)
     titre = models.CharField(max_length=200, blank=True)
     contenu = models.TextField(blank=True)
+    # Diapo image (affiche, photo…) : le titre sert de légende.
+    image = models.ImageField(upload_to="images/", blank=True, validators=[image_legere])
 
     class Meta:
         ordering = ["ordre", "pk"]
@@ -158,4 +165,13 @@ class ElementCulte(models.Model):
     def nom(self):
         if self.type == self.CHANT and self.chant:
             return self.chant.titre
-        return self.titre or self.moment or "Texte libre"
+        return self.titre or self.moment or ("Image" if self.type == self.IMAGE else "Texte libre")
+
+
+@receiver(post_delete, sender=ElementCulte)
+def supprimer_fichier_image(sender, instance, **kwargs):
+    """Une image retirée du culte est effacée du disque, sauf si un autre élément
+    (culte dupliqué) utilise encore le même fichier."""
+    nom = instance.image.name
+    if nom and not ElementCulte.objects.filter(image=nom).exists():
+        instance.image.storage.delete(nom)

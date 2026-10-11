@@ -31,7 +31,8 @@
   <span class="date-culte masque-mobile">{{ culte.date|date:"l j F Y"|capfirst }}</span>
   <span id="indicateur" class="indicateur" aria-live="polite">{% if peut_modifier %}✓ Enregistré{% else %}Lecture seule{% endif %}</span>
   <span class="actions-culte">
-    <a class="bouton-exporter" href="{% url 'cultes:export_pptx' culte.uuid %}" download title="Exporter le culte en PowerPoint (.pptx)">⇩ PowerPoint</a>
+    <a class="bouton-exporter" href="{% url 'cultes:export_pdf' culte.uuid %}" download title="Télécharger le culte en PDF (une diapo par page)">⇩ PDF</a>
+    <a class="bouton-exporter" href="{% url 'cultes:export_pptx' culte.uuid %}" download title="Exporter le culte en PowerPoint (.pptx)">⇩ PPTX</a>
     <a class="bouton-projeter" href="{% url 'cultes:projection' culte.uuid %}" data-projeter title="Projeter (F5) : diapo seule sur le projecteur, diapo suivante sur cet ordinateur. Maj+F5 : depuis la diapo actuelle">▶ Projeter</a>
   </span>
 </div>
@@ -60,6 +61,7 @@
     </div>
     <div class="ruban-groupe">
       <a class="outil" href="{% url 'cultes:export_pptx' culte.uuid %}" download><span class="outil-icone">⇩</span>Exporter en PowerPoint</a>
+      <a class="outil" href="{% url 'cultes:export_pdf' culte.uuid %}" download><span class="outil-icone">⇩</span>Exporter en PDF</a>
       <span class="ruban-libelle">Exporter</span>
     </div>
     {% if perms.cultes.delete_culte %}
@@ -76,6 +78,7 @@
       {% if perms.chants.add_chant %}<button type="button" class="outil" data-dialogue="dlg-nouveau-chant"><span class="outil-icone">✚</span>Nouveau chant</button>{% endif %}
       <button type="button" class="outil" data-dialogue="dlg-chant"><span class="outil-icone">♪</span>Insérer un chant</button>
       <button type="button" class="outil" data-dialogue="dlg-texte"><span class="outil-icone">▤</span>Texte libre</button>
+      <button type="button" class="outil" data-dialogue="dlg-image"><span class="outil-icone">🖼</span>Image</button>
       <span class="ruban-libelle">Ajouter</span>
     </div>
     {% if perms.chants.change_chant %}
@@ -154,8 +157,9 @@
     </div>
     <div class="ruban-groupe">
       <button type="button" class="outil" data-dialogue="dlg-texte"><span class="outil-icone">▤</span>Texte libre</button>
+      <button type="button" class="outil" data-dialogue="dlg-image"><span class="outil-icone">🖼</span>Image</button>
       <button type="button" class="outil" disabled title="Disponible à l'étape 6"><span class="outil-icone">✝</span>Verset biblique</button>
-      <span class="ruban-libelle">Textes</span>
+      <span class="ruban-libelle">Textes et images</span>
     </div>
   </div>
 
@@ -225,6 +229,7 @@
     </div>
     <div class="ruban-groupe">
       <a class="outil" href="{% url 'cultes:export_pptx' culte.uuid %}" download><span class="outil-icone">⇩</span>Exporter en PowerPoint</a>
+      <a class="outil" href="{% url 'cultes:export_pdf' culte.uuid %}" download><span class="outil-icone">⇩</span>Exporter en PDF</a>
       <span class="ruban-libelle">Exporter</span>
     </div>
   </div>
@@ -314,6 +319,24 @@
       <small>Une ligne vide sépare deux diapos.</small>
     </label>
     <button type="submit" class="bouton-principal">Ajouter</button>
+  </form>
+</dialog>
+
+<dialog id="dlg-image" class="dialogue" aria-labelledby="dlg-image-titre">
+  <form hx-post="{% url 'cultes:ajouter_image' culte.uuid %}" hx-encoding="multipart/form-data" hx-target="#espace" hx-swap="outerHTML" data-ferme-apres>
+    <div class="dialogue-entete">
+      <h2 id="dlg-image-titre">Insérer une image</h2>
+      <button type="button" class="bouton-lien" data-fermer>✕</button>
+    </div>
+    <label>Image <small>JPEG, PNG ou WebP, 5 Mo au plus. Affichée en entier sur la diapo.</small>
+      <input type="file" name="image" accept="image/jpeg,image/png,image/webp,image/gif" required>
+    </label>
+    <label>Moment <small>(facultatif : ajoute une diapo « Moment : Légende » avant l'image)</small>
+      <input name="moment" list="liste-moments" maxlength="100" placeholder="Ex. : Annonces">
+    </label>
+    <label>Légende <small>(facultative, sous l'image)</small> <input name="titre" maxlength="200"></label>
+    <p class="message message-error" data-erreur hidden></p>
+    <button type="submit" class="bouton-principal">Insérer</button>
   </form>
 </dialog>
 {% endif %}

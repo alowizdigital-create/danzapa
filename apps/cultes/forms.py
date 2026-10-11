@@ -40,13 +40,29 @@ def parametres_form(donnees, instance):
 class ElementForm(forms.ModelForm):
     class Meta:
         model = ElementCulte
-        fields = ["moment", "titre", "contenu"]
+        fields = ["moment", "titre", "contenu", "image"]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if self.instance.type == ElementCulte.CHANT:
             del self.fields["titre"]
             del self.fields["contenu"]
+        if self.instance.type == ElementCulte.IMAGE:
+            del self.fields["contenu"]  # image facultative : sans fichier, on garde l'actuelle
+        else:
+            del self.fields["image"]
+
+
+class ImageForm(forms.ModelForm):
+    """Insertion → Image : nouvelle diapo image dans le culte."""
+
+    class Meta:
+        model = ElementCulte
+        fields = ["moment", "titre", "image"]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["image"].required = True
 
 
 class TexteLibreForm(forms.ModelForm):

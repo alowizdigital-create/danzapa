@@ -17,7 +17,7 @@ from apps.chants.forms import ChantInfosForm, DiapoChantForm, NouveauChantForm
 from apps.chants.models import Chant, DiapoChant
 from apps.chants.recherche import filtrer, titres_d_abord
 
-from apps.projection import pptx, rendu
+from apps.projection import pdf, pptx, rendu
 from apps.projection.models import POLICES, Theme
 
 from . import diapos
@@ -25,6 +25,7 @@ from .forms import (
     AjoutChantForm,
     DuplicationForm,
     ElementForm,
+    ImageForm,
     NouveauCulteForm,
     TexteLibreForm,
     parametres_form,
@@ -244,6 +245,26 @@ def ajouter_texte(request, pk):
     element.ordre = culte.prochain_ordre()
     element.save()
     return reponse_espace(request, culte, element.uuid)
+
+
+@peut_modifier
+@require_POST
+def ajouter_image(request, pk):
+    culte = get_object_or_404(Culte, uuid=pk)
+    form = ImageForm(request.POST, request.FILES)
+    if not form.is_valid():
+        return HttpResponseBadRequest(premiere_erreur(form))
+    element = form.save(commit=False)
+    element.culte = culte
+    element.type = ElementCulte.IMAGE
+    element.ordre = culte.prochain_ordre()
+    element.save()
+    return reponse_espace(request, culte, element.uuid)
+
+
+def supprimer_si_inutilisee(stockage, nom):
+    if not ElementCulte.objects.filter(image=nom).exists():
+        stockage.delete(nom)
 
 
 # ---------------------------------------------------------------- Chants (saisie en place)
@@ -506,10 +527,13 @@ def element_du_culte(pk, element_pk):
 @require_POST
 def modifier_element(request, pk, element_pk):
     element = element_du_culte(pk, element_pk)
-    form = ElementForm(request.POST, instance=element)
+    ancienne_image = element.image.name
+    form = ElementForm(request.POST, request.FILES, instance=element)
     if not form.is_valid():
-        return HttpResponseBadRequest("Données invalides.")
+        return HttpResponseBadRequest(premiere_erreur(form))
     form.save()
+    if ancienne_image and element.image.name != ancienne_image:
+        supprimer_si_inutilisee(element.image.storage, ancienne_image)
     return reponse_espace(request, element.culte, element.uuid)
 
 
@@ -583,6 +607,16 @@ def projection(request, pk):
         "cultes/projection_presentateur.html" if presentateur else "cultes/projection.html",
         {"culte": culte, "theme": theme, "diapos": visibles, "debut": debut},
     )
+
+
+@peut_voir
+def exporter_pdf(request, pk):
+    """Le culte en PDF, une diapo par page (16:9)."""
+    culte = get_object_or_404(Culte.objects.select_related("theme"), uuid=pk)
+    reponse = HttpResponse(pdf.exporter(culte), content_type="application/pdf")
+    nom = pptx.nom_de_fichier(culte).removesuffix(".pptx") + ".pdf"
+    reponse.headers["Content-Disposition"] = content_disposition_header(True, nom)
+    return reponse
 
 
 @peut_voir
