@@ -239,6 +239,22 @@ class AlerteVolumeTests(TestCase):
         reponse = self.client.get(reverse("comptes:connexion"))
         self.assertNotContains(reponse, "ne sont pas enregistrées durablement")
 
+    def test_base_conservee_mais_pas_les_images(self):
+        from django.test import override_settings
+
+        with override_settings(DONNEES_PERSISTANTES=True, MEDIAS_PERSISTANTS=False):
+            page = self.client.get(reverse("comptes:connexion"))
+            self.assertNotContains(page, "ne sont pas enregistrées durablement")
+            self.assertContains(page, "images envoyées")
+            self.assertIn(b"images non conserv", self.client.get(reverse("sante")).content)
+        with override_settings(DONNEES_PERSISTANTES=False, MEDIAS_PERSISTANTS=False):
+            page = self.client.get(reverse("comptes:connexion"))
+            self.assertContains(page, "DATABASE_URL")
+            self.assertNotContains(page, "alerte-legere")
+        with override_settings(DONNEES_PERSISTANTES=True, MEDIAS_PERSISTANTS=True):
+            self.assertNotContains(self.client.get(reverse("comptes:connexion")), "alerte-serveur")
+            self.assertEqual(self.client.get(reverse("sante")).content, b"ok")
+
     def test_detection(self):
         from pathlib import Path
 

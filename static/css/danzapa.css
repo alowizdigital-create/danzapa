@@ -989,3 +989,4 @@ body.presentateur {
 .partage-gestion { display: flex; justify-content: space-between; margin-top: 0.5rem; border-top: 1px solid var(--bordure); padding-top: 0.5rem; }
 /* La date est déjà dans le titre du culte : la masquer quand la barre manque de place. */
 @media (max-width: 1440px) { .barre-culte .date-culte { display: none; } }
+.alerte-legere { background: #fff4ce; color: #5c4400; border-bottom: 1px solid #f0d78c; }

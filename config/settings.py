@@ -196,6 +196,8 @@ BASE_EXTERNE = DATABASES["default"]["ENGINE"].endswith("postgresql")
 # Avec une base PostgreSQL séparée, les données ne dépendent plus du volume /data
 # (qui ne garde alors que les images des thèmes et la clé secrète générée).
 DONNEES_PERSISTANTES = BASE_EXTERNE or donnees_persistantes(DATA_DIR)
+# Images envoyées (diapos image, thèmes) et clé secrète : toujours dans DATA_DIR.
+MEDIAS_PERSISTANTS = donnees_persistantes(DATA_DIR)
 
 AUTH_USER_MODEL = "comptes.Utilisateur"
 

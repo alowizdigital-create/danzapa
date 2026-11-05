@@ -11,9 +11,13 @@
 <body class="{% block classe_body %}{% endblock %}" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
   {% if not donnees_persistantes %}
   <div class="alerte-serveur" role="alert">
-    ⚠ <strong>Les données ne sont pas enregistrées durablement</strong> : aucun volume n'est monté sur <code>/data</code>.
-    Chants, cultes et mots de passe seront <strong>perdus au prochain déploiement</strong>.
-    Déployer avec <code>docker-compose.yml</code> (service Compose dans Dokploy, voir DEPLOIEMENT.md) : son volume conserve tout.
+    ⚠ <strong>Les données ne sont pas enregistrées durablement</strong> : chants, cultes et mots de passe seront <strong>perdus au prochain déploiement</strong>.
+    Dans Dokploy : créer une base PostgreSQL (Create Service → Database), puis ajouter <code>DATABASE_URL</code> dans l'onglet Environment de l'application (voir DEPLOIEMENT.md).
+  </div>
+  {% elif not medias_persistants %}
+  <div class="alerte-serveur alerte-legere" role="status">
+    Base de données conservée ✓ — mais les <strong>images envoyées</strong> (diapos image, thèmes) seront perdues au prochain déploiement :
+    dans Dokploy, Advanced → Volumes, ajouter un volume <code>danzapa-data</code> sur <code>/data</code>.
   </div>
   {% endif %}
   {% if user.is_authenticated %}

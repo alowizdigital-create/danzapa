@@ -14,7 +14,7 @@ fi
 mkdir -p "$DATA/media"
 
 if [ -n "${DATABASE_URL}" ]; then
-    # Base PostgreSQL (service « db » du docker-compose) : attendre qu'elle
+    # Base PostgreSQL (service Database de Dokploy) : attendre qu'elle
     # accepte les connexions avant d'appliquer les migrations.
     essais=0
     until python -c "import os, psycopg; psycopg.connect(os.environ['DATABASE_URL'], connect_timeout=3).close()" 2>/tmp/attente-base; do
@@ -22,15 +22,17 @@ if [ -n "${DATABASE_URL}" ]; then
         if [ "$essais" -ge 30 ]; then
             echo "Base PostgreSQL injoignable après 60 secondes :"
             cat /tmp/attente-base
-            echo "Vérifier que le service « db » tourne (Dokploy → Logs du service db)."
-            echo "« password authentication failed » : POSTGRES_PASSWORD a changé après"
-            echo "le premier déploiement ; remettre l'ancienne valeur (voir DEPLOIEMENT.md)."
+            echo "Vérifier que la base tourne (Dokploy → page de la base → Deploy / Logs)"
+            echo "et que DATABASE_URL est bien l'« Internal Connection URL » de la base."
             exit 1
         fi
         echo "En attente de la base PostgreSQL… ($essais/30)"
         sleep 2
     done
-    echo "Base PostgreSQL prête : comptes, chants et cultes sont conservés entre les déploiements."
+    hote=$(python -c "import os; from urllib.parse import urlsplit; print(urlsplit(os.environ['DATABASE_URL']).hostname)")
+    echo "Base de données : PostgreSQL (hôte $hote) — comptes, chants et cultes sont conservés entre les déploiements."
+else
+    echo "Base de données : SQLite ($DATA/db.sqlite3)."
 fi
 
 # Sans volume monté sur /data ni PostgreSQL, la base SQLite est dans le
@@ -40,9 +42,14 @@ if [ "$(stat -c %d "$DATA")" = "$(stat -c %d /)" ] && [ -z "${DATABASE_URL}${DAT
     echo "############################################################"
     echo "  ATTENTION : aucun volume n'est monté sur $DATA."
     echo "  Les chants, cultes et comptes seront PERDUS au prochain"
-    echo "  déploiement. Déployer avec docker-compose.yml (service"
-    echo "  Compose dans Dokploy, voir DEPLOIEMENT.md)."
+    echo "  déploiement. Dokploy : créer une base PostgreSQL et ajouter"
+    echo "  DATABASE_URL dans Environment (voir DEPLOIEMENT.md)."
     echo "############################################################"
+fi
+
+if [ "$(stat -c %d "$DATA")" = "$(stat -c %d /)" ] && [ -n "${DATABASE_URL}" ]; then
+    echo "Note : sans volume sur $DATA, les images envoyées (diapos image, thèmes)"
+    echo "ne sont pas conservées. Dokploy → Advanced → Volumes : danzapa-data sur $DATA."
 fi
 
 python manage.py migrate --noinput

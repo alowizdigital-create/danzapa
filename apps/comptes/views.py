@@ -22,5 +22,10 @@ def sante(request):
     with connection.cursor() as curseur:
         curseur.execute("SELECT 1")
     # Toujours 200 (le conteneur fonctionne) ; l'absence de volume est signalée.
-    message = "ok" if settings.DONNEES_PERSISTANTES else "ok (sans volume /data : données non conservées)"
+    if not settings.DONNEES_PERSISTANTES:
+        message = "ok (sans volume /data : données non conservées)"
+    elif not settings.MEDIAS_PERSISTANTS:
+        message = "ok (base conservée ; sans volume /data : images non conservées)"
+    else:
+        message = "ok"
     return HttpResponse(message, content_type="text/plain")

@@ -121,7 +121,7 @@ Avec un seul écran : onglet **Diaporama → Sur cet écran seulement**. Les él
 
 ## Mise en ligne
 
-Danzapa se déploie avec Docker Compose, par exemple avec **Dokploy** sur un VPS. Le fichier [`docker-compose.yml`](docker-compose.yml) lance l'application avec sa base **SQLite** dans un volume nommé : chants, cultes et comptes sont conservés à chaque redéploiement. Pour l'instant, l'accès se fait **sans connexion** (`DANZAPA_SANS_CONNEXION=true` dans `config/production.env`). Le guide pas à pas est dans [DEPLOIEMENT.md](DEPLOIEMENT.md) : sous-domaine, service Compose, HTTPS, mises à jour et sauvegardes.
+Danzapa se déploie avec Docker Compose, par exemple avec **Dokploy** sur un VPS. Le fichier [`docker-compose.yml`](docker-compose.yml) lance l'application avec sa base **SQLite** dans un volume nommé : chants, cultes et comptes sont conservés à chaque redéploiement. Pour l'instant, l'accès se fait **sans connexion** (`DANZAPA_SANS_CONNEXION=true` dans `config/production.env`). Pour que les données ne soient jamais perdues au déploiement, brancher une base **PostgreSQL** créée dans Dokploy (variable `DATABASE_URL`) : voir la première section de [DEPLOIEMENT.md](DEPLOIEMENT.md). Le guide pas à pas est dans [DEPLOIEMENT.md](DEPLOIEMENT.md) : sous-domaine, service Compose, HTTPS, mises à jour et sauvegardes.
 
 ## Installation (développement)
 

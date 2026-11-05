@@ -15,6 +15,78 @@ Dokploy crée le volume au premier déploiement et **le garde à chaque redéplo
 
 ---
 
+## ⭐ Ne plus perdre les données : base PostgreSQL dans Dokploy (Application)
+
+Si Danzapa est créé dans Dokploy comme **Application** (Dockerfile) et qu'une **bande rouge** « Les données ne sont pas enregistrées durablement » s'affiche, la base est dans le conteneur : elle est effacée à chaque Deploy. La solution : une base **PostgreSQL** gérée par Dokploy, conservée à chaque Deploy. L'application est déjà prête ; il n'y a que des réglages à faire dans Dokploy (environ 10 minutes).
+
+> Avant de commencer, si des chants saisis depuis le dernier Deploy doivent être gardés, faites d'abord l'étape facultative « Reprendre les données actuelles » plus bas.
+
+### 1. Créer la base de données
+1. Dans Dokploy, ouvrez le projet **Danzapa**.
+2. **Create Service → Database → PostgreSQL**.
+3. Remplissez :
+   - **Name** : `danzapa-db`
+   - **Database Name** : `danzapa`
+   - **Database User** : `danzapa`
+   - **Database Password** : laissez Dokploy le générer (ou choisissez un mot de passe long).
+   - **Docker Image** : laissez la valeur proposée (par exemple `postgres:16`).
+4. **Create**, puis sur la page de la base : **Deploy**. Attendez que l'état passe au vert.
+
+### 2. Brancher l'application sur la base
+1. Sur la page de la base, onglet **General** (ou « Connection ») : copiez l'**Internal Connection URL**. Elle ressemble à
+   `postgresql://danzapa:xxxxxxxx@danzapa-db-abc123:5432/danzapa`.
+2. Ouvrez l'application **danzapa** → onglet **Environment** et ajoutez une ligne :
+   ```env
+   DATABASE_URL=postgresql://danzapa:xxxxxxxx@danzapa-db-abc123:5432/danzapa
+   ```
+   (collez l'adresse copiée telle quelle), puis **Save**.
+
+   Cette adresse contient le mot de passe de la base : elle va **uniquement dans Dokploy**, jamais dans GitHub.
+
+### 3. Garder aussi les images (conseillé)
+Application **danzapa** → **Advanced → Volumes / Mounts → Add Volume** :
+- **Type** : `Volume Mount`
+- **Volume Name** : `danzapa-data`
+- **Mount Path** : `/data`
+
+Ce volume garde les images envoyées (diapos image, images des thèmes) et la clé secrète (les personnes connectées le restent après un Deploy). Sans lui, une bande jaune le rappelle en haut de l'application.
+
+### 4. Déployer et vérifier
+1. Application **danzapa** → **Deploy**.
+2. Dans les **Logs** de l'application, vous devez voir :
+   ```
+   Base de données : PostgreSQL (hôte danzapa-db-abc123) — comptes, chants et cultes sont conservés entre les déploiements.
+   Administrateur « admin » créé.
+     Mot de passe provisoire : xxxx-xxxx-xxxx-xxxx
+   ```
+   Le mot de passe provisoire n'apparaît qu'**une seule fois** (la base est neuve) : notez-le.
+3. Ouvrez `https://danzapa.zweey.com` : **plus de bande rouge**.
+4. Test : créez un chant, refaites **Deploy**, rechargez la page : le chant est toujours là.
+
+Si les logs affichent « Base PostgreSQL injoignable », vérifiez que la base est bien démarrée (page de la base → Deploy) et que `DATABASE_URL` est exactement l'**Internal** Connection URL (pas l'External).
+
+### 5. Sauvegardes automatiques (conseillé)
+Page de la base **danzapa-db** → onglet **Backups** : ajoutez une sauvegarde planifiée (par exemple chaque nuit) vers un stockage S3 (Destination à créer dans Dokploy → Settings → S3 Destinations). Vous pouvez aussi lancer une sauvegarde à la main avant une grosse modification.
+
+### Facultatif : reprendre les données actuelles
+Les chants saisis depuis le dernier Deploy sont encore dans le conteneur en cours d'exécution, et seront perdus au prochain Deploy. Pour les garder, **avant l'étape 2** :
+1. Application **danzapa** → onglet **Terminal** (conteneur de l'application), puis :
+   ```bash
+   python manage.py dumpdata --natural-foreign --natural-primary --exclude contenttypes --exclude auth.permission --exclude admin.logentry --exclude sessions --indent 1 > /tmp/danzapa.json && wc -c /tmp/danzapa.json
+   ```
+2. Copiez le fichier hors du conteneur, depuis le VPS en SSH :
+   ```bash
+   docker cp $(docker ps -qf "name=danzapa" | head -1):/tmp/danzapa.json ~/danzapa.json
+   ```
+3. Faites les étapes 1 à 4. Puis renvoyez le fichier dans le nouveau conteneur et chargez-le :
+   ```bash
+   docker cp ~/danzapa.json $(docker ps -qf "name=danzapa" | head -1):/tmp/danzapa.json
+   docker exec $(docker ps -qf "name=danzapa" | head -1) python manage.py loaddata /tmp/danzapa.json
+   ```
+Les images envoyées avant le changement ne sont pas reprises : réinsérez-les si besoin.
+
+---
+
 ## 1. Le sous-domaine (hPanel Hostinger)
 
 1. Dans **hPanel → Domaines → votre domaine → DNS / Serveurs de noms**, ajoutez un enregistrement :
